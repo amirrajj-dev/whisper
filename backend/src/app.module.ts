@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './user/user.module';
@@ -10,6 +10,7 @@ import { NotificationModule } from './notification/notification.module';
 import { AuthModule } from './auth/auth.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { UploadModule } from './upload/upload.module';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -33,6 +34,39 @@ import { UploadModule } from './upload/upload.module';
       }),
     }),
     MongooseModule.forRoot(process.env.MONGO_URL!),
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        pinoHttp: {
+          level: config.get<string>('LOG_LEVEL', 'info'),
+          transport:
+            config.get<string>('NODE_ENV', 'development') === 'development'
+              ? {
+                  target: 'pino-pretty',
+                  options: {
+                    colorize: true,
+                    translateTime: 'SYS:standard',
+                    singleLine: true,
+                  },
+                }
+              : {
+                  targets: [
+                    {
+                      target: 'pino/file',
+                      level: 'info',
+                      options: { destination: './logs/app.log', mkdir: true },
+                    },
+                    {
+                      target: 'pino/file',
+                      level: 'error',
+                      options: { destination: './logs/error.log', mkdir: true },
+                    },
+                  ],
+                },
+        },
+      }),
+    }),
     UserModule,
     ChatModule,
     NotificationModule,
