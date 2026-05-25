@@ -5,6 +5,11 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './user/user.module';
+import { ChatModule } from './chat/chat.module';
+import { NotificationModule } from './notification/notification.module';
+import { AuthModule } from './auth/auth.module';
+import { GatewayModule } from './gateway/gateway.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -29,6 +34,11 @@ import { UserModule } from './user/user.module';
     }),
     MongooseModule.forRoot(process.env.MONGO_URL!),
     UserModule,
+    ChatModule,
+    NotificationModule,
+    AuthModule,
+    GatewayModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
