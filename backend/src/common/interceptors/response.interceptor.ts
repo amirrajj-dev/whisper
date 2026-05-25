@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { map, Observable } from 'rxjs';
 
 interface ResponseI<T> {
@@ -25,13 +25,16 @@ export class ResponseInterceptor<T> implements NestInterceptor<
   ): Observable<any> | Promise<Observable<any>> {
     const ctx = context.switchToHttp();
     const response: Response = ctx.getResponse();
+    const request: Request = ctx.getRequest();
     const statusCode = response.statusCode;
+    const path = request.path;
 
     return next.handle().pipe(
       map((data) => ({
         success: statusCode >= 200 && statusCode < 300,
         message: this.getMessage(statusCode, data),
         timestamp: new Date(),
+        path,
         data: data?.data || data || null,
       })),
     );
