@@ -22,8 +22,8 @@ import { LoggerModule } from 'nestjs-pino';
         MONGO_URL: Joi.string().required(),
         REDIS_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
-        SIGN_UP_JWT_EXPIRES_IN: Joi.string().default('1h'),
-        LOGIN_JWT_EXPIRES_IN: Joi.string().default('15d'),
+        ACCESS_TOKEN_EXPIRES_IN: Joi.string().default('15m'),
+        REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('30d'),
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
