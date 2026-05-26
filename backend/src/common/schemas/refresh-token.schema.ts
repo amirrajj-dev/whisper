@@ -20,8 +20,6 @@ export class RefreshTokenModel {
   tokenHash: string;
   @Prop({ required: true, type: Date })
   expiresAt: Date;
-  @Prop({ required: true, type: String, trim: true })
-  ip: string;
   @Prop({ required: true, type: Date, default: Date.now })
   createdAt: Date;
   @Prop({ required: true, type: Date, default: Date.now })

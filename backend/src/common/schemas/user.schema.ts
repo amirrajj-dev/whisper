@@ -39,12 +39,6 @@ export class UserModel {
   })
   avatarUrl?: string;
   @Prop({
-    type: Boolean,
-    required: true,
-    default: false,
-  })
-  isOnline: boolean;
-  @Prop({
     required: true,
     default: [],
     ref: 'User',
