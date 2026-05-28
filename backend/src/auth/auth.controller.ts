@@ -25,6 +25,7 @@ import {
 } from 'src/common/constants/constants';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -33,6 +34,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('register')
   async register(
     @Body() signupDto: SignupDto,
@@ -57,6 +59,7 @@ export class AuthController {
     return result;
   }
 
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(

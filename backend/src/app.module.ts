@@ -12,6 +12,10 @@ import { GatewayModule } from './gateway/gateway.module';
 import { UploadModule } from './upload/upload.module';
 import { LoggerModule } from 'nestjs-pino';
 import mongoose from 'mongoose';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import Redis from 'ioredis';
 
 @Module({
   imports: [
@@ -32,6 +36,8 @@ import mongoose from 'mongoose';
           .valid('error', 'warn', 'info', 'debug')
           .default('info'),
         CORS_ORIGIN: Joi.string().default('*'),
+        THROTTLE_TTL: Joi.number().required().default(60000),
+        THROTTLE_LIMIT: Joi.number().required().default(10),
       }),
     }),
     MongooseModule.forRoot(process.env.MONGO_URL!),
@@ -68,6 +74,21 @@ import mongoose from 'mongoose';
         },
       }),
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: Number(config.get<number>('THROTTLE_TTL')),
+            limit: Number(config.get<number>('THROTTLE_LIMIT')),
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis(process.env.REDIS_URL as string),
+        ),
+      }),
+    }),
     UserModule,
     ChatModule,
     NotificationModule,
@@ -76,7 +97,13 @@ import mongoose from 'mongoose';
     UploadModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements OnApplicationShutdown {
   async onApplicationShutdown(signal: string) {
