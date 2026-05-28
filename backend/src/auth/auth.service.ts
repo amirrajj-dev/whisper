@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotAcceptableException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -35,6 +36,10 @@ export class AuthService {
       const existingUser = await this.userService.findUserByEmail(email);
       if (existingUser) {
         throw new BadRequestException('User with this email already exists');
+      }
+      const isUsernameTaken = await this.userService.isUsernameTaken(username);
+      if (isUsernameTaken) {
+        throw new NotAcceptableException('username already taken');
       }
       const saltRounds = parseInt(
         this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '10',
