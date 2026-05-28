@@ -133,7 +133,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   getMe(@CurrentUser() user: Omit<User, 'password'>) {
-    console.log(user);
     return user;
   }
 }

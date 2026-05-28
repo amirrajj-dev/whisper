@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -9,6 +9,8 @@ import { UserModule } from 'src/user/user.module';
 import { RefreshTokenSchema } from 'src/common/schemas/refresh-token.schema';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { JwtAuthGuard } from './jwt-auth.gurad';
+import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 
 @Module({
   imports: [
@@ -26,9 +28,10 @@ import { JwtStrategy } from './jwt.strategy';
         },
       }),
     }),
-    UserModule,
+    forwardRef(() => UserModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RestrictEmailDomainPipe],
+  exports: [AuthService, JwtStrategy, JwtAuthGuard],
 })
 export class AuthModule {}
