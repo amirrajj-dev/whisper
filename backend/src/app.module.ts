@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationShutdown } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { UploadModule } from './upload/upload.module';
 import { LoggerModule } from 'nestjs-pino';
+import mongoose from 'mongoose';
 
 @Module({
   imports: [
@@ -77,4 +78,15 @@ import { LoggerModule } from 'nestjs-pino';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements OnApplicationShutdown {
+  async onApplicationShutdown(signal: string) {
+    console.log(`Shutdown signal: ${signal}`);
+    const timeout = setTimeout(() => {
+      console.error('Forced shutdown timeout');
+      process.exit(1);
+    }, 10000);
+
+    await mongoose.disconnect();
+    clearTimeout(timeout);
+  }
+}
