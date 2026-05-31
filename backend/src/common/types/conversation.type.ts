@@ -4,7 +4,9 @@ export type Conversation = {
   participants: string[];
   name?: string;
   avatarUrl?: string;
-  admins: string[];
+  publicId?: string;
+  admins?: string[];
+  owner?: string;
   lastMessage: string;
   lastMessageAt: Date;
   createdBy: string;

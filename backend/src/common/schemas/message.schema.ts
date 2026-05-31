@@ -35,10 +35,21 @@ export class MessageModel {
   })
   content: string;
   @Prop({
+    type: String,
+    required: false,
+  })
+  publicId?: string; // Cloudinary public ID for file deletion
+  @Prop({
     type: Boolean,
     required: true,
     default: false,
   })
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Message',
+    required: false,
+  })
+  replyTo?: string; // Reference to the message being replied to
   edited: boolean;
   @Prop({
     type: Boolean,
@@ -68,3 +79,5 @@ export class MessageModel {
 }
 
 export const MessageSchema = SchemaFactory.createForClass(MessageModel);
+
+MessageSchema.index({ conversationId: 1, createdAt: -1 });

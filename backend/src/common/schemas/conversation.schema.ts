@@ -28,7 +28,20 @@ export class ConversationModel {
     ref: 'User',
     required: true,
   })
-  admins: string[];
+  @Prop({
+    type: String,
+    required: false,
+  })
+  publicId?: string; // Cloudinary public ID for file deletion
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId],
+    default: [],
+    ref: 'User',
+    required: false,
+  })
+  admins?: string[];
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false })
+  owner?: string;
   @Prop({ type: String, trim: true, required: false })
   lastMessage?: string;
   @Prop({ type: Date, required: true })
@@ -43,3 +56,6 @@ export class ConversationModel {
 
 export const ConversationSchema =
   SchemaFactory.createForClass(ConversationModel);
+
+ConversationSchema.index({ participants: 1, lastMessageAt: -1 });
+ConversationSchema.index({ type: 1 });

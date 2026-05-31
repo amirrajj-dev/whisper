@@ -4,6 +4,8 @@ export type Message = {
   senderId: string;
   type: MessageType;
   content: string;
+  publicId?: string;
+  replyTo?: string;
   edited: boolean;
   deleted: boolean;
   deliveredTo: string[];
