@@ -46,6 +46,11 @@ export class UserModel {
   })
   blockedUsers: string[];
   @Prop({
+    type: String,
+    required: false,
+  })
+  publicId?: string; // Cloudinary public ID for file deletion
+  @Prop({
     type: Date,
     required: true,
     default: Date.now,

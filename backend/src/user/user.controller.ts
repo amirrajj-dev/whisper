@@ -7,7 +7,9 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
@@ -15,6 +17,8 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
 import { PaginationDto } from 'src/common/dtos/pagination/pagination.dto';
+import { AVATAR_VALIDATION } from 'src/common/constants/upload.constants';
+import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UserController {
@@ -43,11 +47,13 @@ export class UserController {
   }
 
   @Put('me')
+  @UseInterceptors(FileInterceptor('avatar', AVATAR_VALIDATION))
   async updateUser(
     @Body() data: UpdateUserDto,
     @CurrentUser() user: Omit<User, 'password'>,
+    @UploadedFile() avatarFile?: Express.Multer.File,
   ) {
-    return this.userService.updateUser(user._id, data);
+    return this.userService.updateUser(user._id, data, avatarFile);
   }
 
   @Post(':userId/block')

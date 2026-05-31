@@ -8,11 +8,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
 import { UserDocument } from 'src/common/schemas/user.schema';
+import { UploadService } from 'src/upload/upload.service';
 
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  constructor(@InjectModel('User') private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel('User') private userModel: Model<UserDocument>,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async getUsers(
     currentUserId: string,
@@ -84,6 +88,7 @@ export class UserService {
   async updateUser(
     id: string,
     data: UpdateUserDto,
+    avatarFile?: Express.Multer.File,
   ): Promise<Omit<UserDocument, 'password'>> {
     try {
       this.logger.log(`Updating user: ${id}`);
@@ -121,21 +126,48 @@ export class UserService {
         }
       }
 
-      // Remove undefined values and prevent no-change updates
-      const updateData: UpdateUserDto & { updatedAt?: Date } = {};
+      // Handle avatar upload
+      let avatarUrl = user.avatarUrl;
+      let publicId = user.publicId;
+
+      if (avatarFile) {
+        // Delete old avatar from Cloudinary if exists
+        if (publicId) {
+          await this.uploadService.deleteFile(publicId, 'image');
+        }
+
+        const uploadResult = await this.uploadService.uploadFile(
+          avatarFile,
+          'image',
+        );
+        avatarUrl = uploadResult.url;
+        publicId = uploadResult.publicId;
+      }
+
+      // Build update data
+      const updateData: {
+        username?: string;
+        email?: string;
+        bio?: string;
+        avatarUrl?: string;
+        publicId?: string;
+        updatedAt: Date;
+      } = { updatedAt: new Date() };
       if (data.username && data.username !== user.username)
         updateData.username = data.username;
       if (data.email && data.email !== user.email)
         updateData.email = data.email;
       if (data.bio !== undefined && data.bio !== user.bio)
         updateData.bio = data.bio;
+      if (avatarFile) {
+        updateData.avatarUrl = avatarUrl;
+        updateData.publicId = publicId;
+      }
 
-      if (Object.keys(updateData).length === 0) {
+      if (Object.keys(updateData).length === 1) {
         this.logger.warn(`No changes detected for user: ${id}`);
         throw new BadRequestException('No changes detected');
       }
-
-      updateData.updatedAt = new Date();
 
       // Update user
       const updatedUser = await this.userModel

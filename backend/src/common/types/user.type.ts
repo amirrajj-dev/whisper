@@ -5,6 +5,7 @@ export type User = {
   password: string;
   bio?: string;
   avatarUrl?: string;
+  publicId?: string;
   blockedUsers: string[];
   lastSeen: Date;
   createdAt: Date;

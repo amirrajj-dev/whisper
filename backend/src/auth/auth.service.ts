@@ -258,12 +258,19 @@ export class AuthService {
     payload: JwtPayload,
   ): Promise<Omit<User, 'password'> | null> {
     this.logger.debug(`Validating user from token: ${payload.sub}`);
-    const user = await this.userService.findUserById(payload.sub);
-    if (!user) {
-      this.logger.warn(`Invalid token - user not found: ${payload.sub}`);
-      throw new UnauthorizedException('Invalid token');
+    try {
+      const user = await this.userService.findUserById(payload.sub);
+      if (!user) {
+        this.logger.warn(`Invalid token - user not found: ${payload.sub}`);
+        throw new UnauthorizedException('Invalid token');
+      }
+      this.logger.debug(`User validated successfully: ${user.email}`);
+      return user;
+    } catch (error) {
+      this.logger.error(
+        `error validating user ${payload.sub}: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
     }
-    this.logger.debug(`User validated successfully: ${user.email}`);
-    return user;
   }
 }

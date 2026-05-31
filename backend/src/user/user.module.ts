@@ -4,11 +4,13 @@ import { UserService } from './user.service';
 import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
 import { UserSchema } from 'src/common/schemas/user.schema';
 import { AuthModule } from 'src/auth/auth.module';
+import { UploadModule } from 'src/upload/upload.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     forwardRef(() => AuthModule),
+    UploadModule,
   ],
   controllers: [UserController],
   providers: [UserService],
