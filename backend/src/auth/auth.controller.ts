@@ -22,7 +22,7 @@ import {
   ACCESS_TOKEN_EXPIRY,
   REFRESH_TOKEN_COOKIE,
   REFRESH_TOKEN_EXPIRY,
-} from 'src/common/constants/constants';
+} from 'src/common/constants/auth.constants';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 import { Throttle } from '@nestjs/throttler';
