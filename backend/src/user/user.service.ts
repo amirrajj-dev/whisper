@@ -175,4 +175,76 @@ export class UserService {
       .exec();
     return user?.blockedUsers || [];
   }
+
+  async blockUser(currentUserId: string, targetUserId: string) {
+    try {
+      this.logger.log(`User ${currentUserId} blocking user ${targetUserId}`);
+
+      // Check if trying to block self
+      if (currentUserId === targetUserId) {
+        throw new BadRequestException('You cannot block yourself');
+      }
+
+      // Check if target user exists
+      const targetUser = await this.findUserById(targetUserId);
+      if (!targetUser) {
+        throw new NotFoundException('User to block not found');
+      }
+
+      // Get current user
+      const currentUser = await this.userModel.findById(currentUserId);
+      if (!currentUser) {
+        throw new NotFoundException('Current user not found');
+      }
+
+      // Check if already blocked
+      if (currentUser.blockedUsers.includes(targetUserId)) {
+        throw new BadRequestException('User is already blocked');
+      }
+
+      // Add to blocked users
+      await this.userModel.findByIdAndUpdate(currentUserId, {
+        $addToSet: { blockedUsers: new mongoose.Types.ObjectId(targetUserId) },
+        updatedAt: new Date(),
+      });
+
+      this.logger.log(`User ${currentUserId} blocked ${targetUserId}`);
+
+      return { message: 'User blocked successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Error blocking user: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  }
+
+  async unblockUser(currentUserId: string, targetUserId: string) {
+    try {
+      this.logger.log(`User ${currentUserId} unblocking user ${targetUserId}`);
+
+      const currentUser = await this.userModel.findById(currentUserId);
+      if (!currentUser) {
+        throw new NotFoundException('Current user not found');
+      }
+
+      if (!currentUser.blockedUsers.includes(targetUserId)) {
+        throw new BadRequestException('User is not blocked');
+      }
+
+      await this.userModel.findByIdAndUpdate(currentUserId, {
+        $pull: { blockedUsers: new mongoose.Types.ObjectId(targetUserId) },
+        updatedAt: new Date(),
+      });
+
+      this.logger.log(`User ${currentUserId} unblocked ${targetUserId}`);
+
+      return { message: 'User unblocked successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Error unblocking user: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  }
 }

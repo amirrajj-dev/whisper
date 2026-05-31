@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Post,
   Put,
   Query,
   UseGuards,
@@ -46,5 +48,21 @@ export class UserController {
     @CurrentUser() user: Omit<User, 'password'>,
   ) {
     return this.userService.updateUser(user._id, data);
+  }
+
+  @Post(':userId/block')
+  blockUser(
+    @CurrentUser() user: Omit<User, 'password'>,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.userService.blockUser(user._id, targetUserId);
+  }
+
+  @Delete(':userId/block')
+  unblockUser(
+    @CurrentUser() user: Omit<User, 'password'>,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.userService.unblockUser(user._id, targetUserId);
   }
 }
