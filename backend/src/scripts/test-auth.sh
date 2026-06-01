@@ -1,160 +1,269 @@
 #!/bin/bash
+# Test all auth endpoints (register, login, refresh, logout, token validation)
+# Can run standalone or as part of run-all-tests.sh (reads ACCESS_TOKEN_A, REFRESH_TOKEN_A from env)
+#
+# Usage:
+#   ./src/scripts/test-auth.sh                    # standalone (creates own user)
+#   ACCESS_TOKEN_A=xxx REFRESH_TOKEN_A=xxx ./src/scripts/test-auth.sh  # use existing tokens
 
-BASE_URL="http://localhost:3000/api/auth"
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/test-helper.sh"
 
-echo -e "${BLUE}=== Auth API Testing ===${NC}\n"
+AUTH_BASE="$API_BASE/auth"
+TESTS_PASSED=0
+TESTS_FAILED=0
+TESTS_SKIPPED=0
 
-# Test data
-USERNAME="testuser_$(date +%s)"
-EMAIL="test_$(date +%s)@example.com"
-PASSWORD="Test@123456"
+record_result() {
+  if [[ $1 -eq 0 ]]; then ((TESTS_PASSED++)); else ((TESTS_FAILED++)); fi
+}
 
-# 1. Register
-echo -e "${BLUE}1. Testing Register...${NC}"
-REGISTER_RESP=$(curl -s -X POST $BASE_URL/register \
+# Set up test user if not provided via env
+if [[ -n "$ACCESS_TOKEN_A" && -n "$REFRESH_TOKEN_A" ]]; then
+  USERNAME="$AUTH_TEST_USERNAME"
+  EMAIL="$AUTH_TEST_EMAIL"
+  PASSWORD="$AUTH_TEST_PASSWORD"
+  ACCESS_TOKEN="$ACCESS_TOKEN_A"
+  REFRESH_TOKEN="$REFRESH_TOKEN_A"
+  print_header "Auth Tests (using provided tokens)"
+else
+  USERNAME="testuser_$(date +%s)"
+  EMAIL="test_$(date +%s)@example.com"
+  PASSWORD="Test@123456"
+  print_header "Auth Tests (standalone)"
+fi
+
+# ──────────────────────────────────────────────
+# 1. Register (skipped if tokens provided)
+# ──────────────────────────────────────────────
+if [[ -z "$ACCESS_TOKEN_A" ]]; then
+print_step 1 "Register"
+REGISTER_RESP=$(curl -s -X POST "$AUTH_BASE/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$USERNAME\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
-if [[ $REGISTER_RESP == *"access_token"* ]]; then
-  echo -e "${GREEN}✓ Register successful${NC}"
-  ACCESS_TOKEN=$(echo $REGISTER_RESP | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
-  REFRESH_TOKEN=$(echo $REGISTER_RESP | grep -o '"refresh_token":"[^"]*' | cut -d'"' -f4)
+ACCESS_TOKEN=$(extract_token "$REGISTER_RESP" "access_token")
+REFRESH_TOKEN=$(extract_token "$REGISTER_RESP" "refresh_token")
+
+if [[ -n "$ACCESS_TOKEN" && -n "$REFRESH_TOKEN" ]]; then
+  record_result 0
+  print_pass "Register successful"
 else
-  echo -e "${RED}✗ Register failed: $REGISTER_RESP${NC}"
-  exit 1
+  record_result 1
+  print_fail "Register failed: $(json_val "$REGISTER_RESP" '.message // empty')"
+  [[ -z "$ACCESS_TOKEN_A" ]] && exit 1
 fi
 
+# ──────────────────────────────────────────────
 # 2. Duplicate register
-echo -e "\n${BLUE}2. Testing Duplicate Register...${NC}"
-DUPLICATE_REG=$(curl -s -X POST $BASE_URL/register \
+# ──────────────────────────────────────────────
+print_step 2 "Duplicate register"
+DUPLICATE_RESP=$(curl -s -X POST "$AUTH_BASE/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$USERNAME\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
-if [[ $DUPLICATE_REG == *"already exists"* ]]; then
-  echo -e "${GREEN}✓ Duplicate prevented${NC}"
+DUP_SUCCESS=$(json_val "$DUPLICATE_RESP" '.success // false')
+if [[ "$DUP_SUCCESS" == "false" ]]; then
+  record_result 0
+  print_pass "Duplicate registration prevented"
 else
-  echo -e "${RED}✗ Duplicate not detected${NC}"
+  record_result 1
+  print_fail "Duplicate registration was not rejected"
 fi
 
+# ──────────────────────────────────────────────
 # 3. Login
-echo -e "\n${BLUE}3. Testing Login...${NC}"
-LOGIN_RESP=$(curl -s -X POST $BASE_URL/login \
+# ──────────────────────────────────────────────
+print_step 3 "Login"
+LOGIN_RESP=$(curl -s -X POST "$AUTH_BASE/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
-if [[ $LOGIN_RESP == *"access_token"* ]]; then
-  echo -e "${GREEN}✓ Login successful${NC}"
-  ACCESS_TOKEN=$(echo $LOGIN_RESP | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
-  REFRESH_TOKEN=$(echo $LOGIN_RESP | grep -o '"refresh_token":"[^"]*' | cut -d'"' -f4)
+LOGIN_ACCESS=$(extract_token "$LOGIN_RESP" "access_token")
+LOGIN_REFRESH=$(extract_token "$LOGIN_RESP" "refresh_token")
+if [[ -n "$LOGIN_ACCESS" ]]; then
+  ACCESS_TOKEN="$LOGIN_ACCESS"
+  REFRESH_TOKEN="$LOGIN_REFRESH"
+  record_result 0
+  print_pass "Login successful"
 else
-  echo -e "${RED}✗ Login failed: $LOGIN_RESP${NC}"
+  record_result 1
+  print_fail "Login failed: $(json_val "$LOGIN_RESP" '.message // empty')"
+fi
+else
+  print_step 1 "Register"
+  print_warn "Skipped (using existing tokens)"
+  print_step 2 "Duplicate register"
+  print_warn "Skipped (using existing tokens)"
+  print_step 3 "Login"
+  print_warn "Skipped (using existing tokens)"
 fi
 
-# 4. Wrong password
-echo -e "\n${BLUE}4. Testing Wrong Password...${NC}"
-WRONG_PASS=$(curl -s -X POST $BASE_URL/login \
+# ──────────────────────────────────────────────
+# 4. Login with wrong password
+# ──────────────────────────────────────────────
+print_step 4 "Login with wrong password"
+WRONG_PASS_RESP=$(curl -s -X POST "$AUTH_BASE/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"WrongPass123!\"}")
 
-if [[ $WRONG_PASS == *"Invalid credentials"* ]]; then
-  echo -e "${GREEN}✓ Wrong password rejected${NC}"
+WRONG_SUCCESS=$(json_val "$WRONG_PASS_RESP" '.success // false')
+if [[ "$WRONG_SUCCESS" == "false" ]]; then
+  record_result 0
+  print_pass "Wrong password rejected"
 else
-  echo -e "${RED}✗ Wrong password not detected${NC}"
+  record_result 1
+  print_fail "Wrong password was accepted"
 fi
 
-# 5. Get current user (protected)
-echo -e "\n${BLUE}5. Testing GET /me...${NC}"
-ME_RESP=$(curl -s -X GET $BASE_URL/me \
+# ──────────────────────────────────────────────
+# 5. GET /me (protected)
+# ──────────────────────────────────────────────
+print_step 5 "GET /auth/me"
+ME_RESP=$(curl -s -X GET "$AUTH_BASE/me" \
   -H "Authorization: Bearer $ACCESS_TOKEN")
 
-if [[ $ME_RESP == *"$EMAIL"* ]]; then
-  echo -e "${GREEN}✓ Protected route accessible${NC}"
+ME_EMAIL=$(json_val "$ME_RESP" '.data.email // empty')
+if [[ "$ME_EMAIL" == "$EMAIL" ]]; then
+  record_result 0
+  print_pass "Protected route accessible, correct user returned"
 else
-  echo -e "${RED}✗ Protected route failed${NC}"
+  record_result 1
+  print_fail "Protected route failed: $(json_val "$ME_RESP" '.message // empty')"
 fi
 
-# 6. Unauthorized access
-echo -e "\n${BLUE}6. Testing Unauthorized Access...${NC}"
-UNAUTH_RESP=$(curl -s -X GET $BASE_URL/me)
-if [[ $UNAUTH_RESP == *"401"* || $UNAUTH_RESP == *"Unauthorized"* ]]; then
-  echo -e "${GREEN}✓ Unauthorized blocked${NC}"
+# ──────────────────────────────────────────────
+# 6. Unauthorized access (no token)
+# ──────────────────────────────────────────────
+print_step 6 "Unauthorized access"
+UNAUTH_RESP=$(curl -s -X GET "$AUTH_BASE/me")
+UNAUTH_SUCCESS=$(json_val "$UNAUTH_RESP" '.success // false')
+UNAUTH_STATUS=$(json_val "$UNAUTH_RESP" '.statusCode // 200')
+if [[ "$UNAUTH_SUCCESS" == "false" || "$UNAUTH_STATUS" == "401" ]]; then
+  record_result 0
+  print_pass "Unauthorized access blocked"
 else
-  echo -e "${RED}✗ Unauthorized should be blocked${NC}"
+  record_result 1
+  print_fail "Unauthorized request was not blocked"
 fi
 
+# ──────────────────────────────────────────────
 # 7. Refresh token
-echo -e "\n${BLUE}7. Testing Refresh Token...${NC}"
-REFRESH_RESP=$(curl -s -X POST $BASE_URL/refresh \
+# ──────────────────────────────────────────────
+print_step 7 "Token refresh"
+REFRESH_RESP=$(curl -s -X POST "$AUTH_BASE/refresh" \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}")
 
-if [[ $REFRESH_RESP == *"access_token"* ]]; then
-  echo -e "${GREEN}✓ Token refresh successful${NC}"
-  NEW_ACCESS=$(echo $REFRESH_RESP | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+NEW_ACCESS=$(extract_token "$REFRESH_RESP" "access_token")
+NEW_REFRESH=$(extract_token "$REFRESH_RESP" "refresh_token")
+if [[ -n "$NEW_ACCESS" && -n "$NEW_REFRESH" ]]; then
+  ACCESS_TOKEN="$NEW_ACCESS"
+  REFRESH_TOKEN="$NEW_REFRESH"
+  record_result 0
+  print_pass "Token refresh successful"
 else
-  echo -e "${RED}✗ Refresh failed${NC}"
+  record_result 1
+  print_fail "Token refresh failed: $(json_val "$REFRESH_RESP" '.message // empty')"
 fi
 
+# ──────────────────────────────────────────────
 # 8. Invalid refresh token
-echo -e "\n${BLUE}8. Testing Invalid Refresh Token...${NC}"
-INVALID_REFRESH=$(curl -s -X POST $BASE_URL/refresh \
+# ──────────────────────────────────────────────
+print_step 8 "Invalid refresh token"
+INVALID_REF_RESP=$(curl -s -X POST "$AUTH_BASE/refresh" \
   -H "Content-Type: application/json" \
-  -d "{\"refresh_token\":\"invalid.token.here\"}")
+  -d '{"refresh_token":"invalid.token.here"}')
 
-if [[ $INVALID_REFRESH == *"Invalid"* ]]; then
-  echo -e "${GREEN}✓ Invalid token rejected${NC}"
+INVALID_REF_SUCCESS=$(json_val "$INVALID_REF_RESP" '.success // false')
+if [[ "$INVALID_REF_SUCCESS" == "false" ]]; then
+  record_result 0
+  print_pass "Invalid refresh token rejected"
 else
-  echo -e "${RED}✗ Invalid token accepted${NC}"
+  record_result 1
+  print_fail "Invalid refresh token was accepted"
 fi
 
+# ──────────────────────────────────────────────
 # 9. Logout
-echo -e "\n${BLUE}9. Testing Logout...${NC}"
-LOGOUT_RESP=$(curl -s -X POST $BASE_URL/logout \
+# ──────────────────────────────────────────────
+print_step 9 "Logout"
+LOGOUT_RESP=$(curl -s -X POST "$AUTH_BASE/logout" \
   -H "Authorization: Bearer $ACCESS_TOKEN")
 
-if [[ $LOGOUT_RESP == *"success"* ]]; then
-  echo -e "${GREEN}✓ Logout successful${NC}"
+LOGOUT_SUCCESS=$(json_val "$LOGOUT_RESP" '.success // false')
+if [[ "$LOGOUT_SUCCESS" == "true" ]]; then
+  record_result 0
+  print_pass "Logout successful"
 else
-  echo -e "${RED}✗ Logout failed${NC}"
+  record_result 1
+  print_fail "Logout failed: $(json_val "$LOGOUT_RESP" '.message // empty')"
 fi
 
-# 10. Verify logout (should fail)
-echo -e "\n${BLUE}10. Testing Access After Logout...${NC}"
-AFTER_LOGOUT=$(curl -s -X GET $BASE_URL/me \
+# ──────────────────────────────────────────────
+# 10. Access after logout (should fail)
+# ──────────────────────────────────────────────
+print_step 10 "Access after logout"
+AFTER_LOGOUT_RESP=$(curl -s -X GET "$AUTH_BASE/me" \
   -H "Authorization: Bearer $ACCESS_TOKEN")
 
-if [[ $AFTER_LOGOUT == *"401"* || $AFTER_LOGOUT == *"Unauthorized"* ]]; then
-  echo -e "${GREEN}✓ Cannot access after logout${NC}"
+AFTER_SUCCESS=$(json_val "$AFTER_LOGOUT_RESP" '.success // false')
+AFTER_STATUS=$(json_val "$AFTER_LOGOUT_RESP" '.statusCode // 200')
+if [[ "$AFTER_SUCCESS" == "false" || "$AFTER_STATUS" == "401" ]]; then
+  record_result 0
+  print_pass "Access blocked after logout"
 else
-  echo -e "${RED}✗ Still accessible after logout${NC}"
+  record_result 1
+  print_fail "Still accessible after logout"
 fi
 
+# ──────────────────────────────────────────────
 # 11. Invalid email format
-echo -e "\n${BLUE}11. Testing Invalid Email Format...${NC}"
-INVALID_EMAIL=$(curl -s -X POST $BASE_URL/register \
+# ──────────────────────────────────────────────
+print_step 11 "Invalid email format"
+INVALID_EMAIL_RESP=$(curl -s -X POST "$AUTH_BASE/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"test\",\"email\":\"invalid-email\",\"password\":\"Test@123456\"}")
+  -d '{"username":"test","email":"not-an-email","password":"Test@123456"}')
 
-if [[ $INVALID_EMAIL == *"email"* || $INVALID_EMAIL == *"validation"* ]]; then
-  echo -e "${GREEN}✓ Invalid email rejected${NC}"
+INV_EMAIL_SUCCESS=$(json_val "$INVALID_EMAIL_RESP" '.success // false')
+if [[ "$INV_EMAIL_SUCCESS" == "false" ]]; then
+  record_result 0
+  print_pass "Invalid email rejected"
 else
-  echo -e "${RED}✗ Invalid email accepted${NC}"
+  record_result 1
+  print_fail "Invalid email was accepted"
 fi
 
+# ──────────────────────────────────────────────
 # 12. Weak password
-echo -e "\n${BLUE}12. Testing Weak Password...${NC}"
-WEAK_PASS=$(curl -s -X POST $BASE_URL/register \
+# ──────────────────────────────────────────────
+print_step 12 "Weak password"
+WEAK_PASS_RESP=$(curl -s -X POST "$AUTH_BASE/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"test2\",\"email\":\"test2@example.com\",\"password\":\"123\"}")
+  -d '{"username":"test2","email":"test2@example.com","password":"123"}')
 
-if [[ $WEAK_PASS == *"password"* ]]; then
-  echo -e "${GREEN}✓ Weak password rejected${NC}"
+WEAK_SUCCESS=$(json_val "$WEAK_PASS_RESP" '.success // false')
+if [[ "$WEAK_SUCCESS" == "false" ]]; then
+  record_result 0
+  print_pass "Weak password rejected"
 else
-  echo -e "${RED}✗ Weak password accepted${NC}"
+  record_result 1
+  print_fail "Weak password was accepted"
 fi
 
-echo -e "\n${GREEN}=== Testing Complete ===${NC}"
+# ──────────────────────────────────────────────
+# Summary
+# ──────────────────────────────────────────────
+print_header "Auth Test Summary"
+echo -e "  ${GREEN}Passed: $TESTS_PASSED${NC}"
+echo -e "  ${RED}Failed: $TESTS_FAILED${NC}"
+echo -e "  ${YELLOW}Skipped: $TESTS_SKIPPED${NC}"
+
+# Export tokens for downstream scripts
+export ACCESS_TOKEN_A="$ACCESS_TOKEN"
+export REFRESH_TOKEN_A="$REFRESH_TOKEN"
+export AUTH_TEST_USERNAME="$USERNAME"
+export AUTH_TEST_EMAIL="$EMAIL"
+export AUTH_TEST_PASSWORD="$PASSWORD"
+
+exit $(( TESTS_FAILED > 0 ? 1 : 0 ))
