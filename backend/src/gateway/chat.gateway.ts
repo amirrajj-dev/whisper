@@ -17,7 +17,7 @@ import { ConversationDocument } from 'src/common/schemas/conversation.schema';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:4000',
     credentials: true,
   },
 })
