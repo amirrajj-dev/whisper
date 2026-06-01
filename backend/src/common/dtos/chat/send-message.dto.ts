@@ -1,14 +1,22 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
+export enum MessageType {
+  TEXT = 'text',
+  IMAGE = 'image',
+  FILE = 'file',
+  VOICE = 'voice',
+  VIDEO = 'video',
+}
+
 export class SendMessageDto {
   @IsNotEmpty()
   @IsString()
   conversationId: string;
 
-  @IsEnum(['text', 'image', 'file', 'voice', 'video'])
+  @IsEnum(MessageType)
   type: 'text' | 'image' | 'file' | 'voice' | 'video';
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   content: string;
   @IsOptional()

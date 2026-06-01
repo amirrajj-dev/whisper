@@ -7,13 +7,18 @@ import {
   MaxLength,
 } from 'class-validator';
 
+export enum ConversationType {
+  PRIVATE = 'private',
+  GROUP = 'group',
+}
+
 export class CreateConversationDto {
-  @IsEnum(['private', 'group'])
+  @IsEnum(ConversationType)
   type: 'private' | 'group';
 
   @IsArray()
   @IsString({ each: true })
-  @ArrayMinSize(2)
+  @ArrayMinSize(1)
   participants: string[];
 
   @IsOptional()
