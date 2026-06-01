@@ -81,3 +81,4 @@ export class MessageModel {
 export const MessageSchema = SchemaFactory.createForClass(MessageModel);
 
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
+MessageSchema.index({ replyTo: 1 });

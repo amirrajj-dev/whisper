@@ -38,3 +38,6 @@ export class NotificationModel {
 
 export const NotificationSchema =
   SchemaFactory.createForClass(NotificationModel);
+
+NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 }); // 30 days
+NotificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
