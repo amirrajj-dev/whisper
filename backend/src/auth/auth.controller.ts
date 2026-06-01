@@ -37,7 +37,7 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('register')
   async register(
-    @Body() signupDto: SignupDto,
+    @Body(RestrictEmailDomainPipe) signupDto: SignupDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.signup(signupDto);
