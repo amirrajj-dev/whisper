@@ -14,7 +14,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
 import { ChatService } from './chat.service';
@@ -73,6 +73,7 @@ export class ChatController {
     );
   }
 
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 per hour
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('avatar', AVATAR_VALIDATION))

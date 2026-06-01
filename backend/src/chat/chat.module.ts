@@ -6,12 +6,14 @@ import { ConversationSchema } from 'src/common/schemas/conversation.schema';
 import { UserModule } from 'src/user/user.module';
 import { MessageSchema } from 'src/common/schemas/message.schema';
 import { UploadModule } from 'src/upload/upload.module';
+import { UserSchema } from 'src/common/schemas/user.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: 'Conversation', schema: ConversationSchema },
       { name: 'Message', schema: MessageSchema },
+      { name: 'User', schema: UserSchema },
     ]),
     UserModule,
     UploadModule,
