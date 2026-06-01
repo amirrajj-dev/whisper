@@ -1,4 +1,10 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export enum MessageType {
   TEXT = 'text',
@@ -18,6 +24,7 @@ export class SendMessageDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(4000)
   content: string;
   @IsOptional()
   @IsString()
