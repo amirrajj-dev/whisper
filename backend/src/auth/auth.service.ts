@@ -19,6 +19,7 @@ import { LoginDto } from 'src/common/dtos/auth/login.dto';
 import { RefreshTokenDocument } from 'src/common/schemas/refresh-token.schema';
 import { User } from 'src/common/types/user.type';
 import { REFRESH_TOKEN_EXPIRY } from 'src/common/constants/auth.constants';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly mailService: MailService,
     @InjectModel('RefreshToken')
     private refreshTokenModel: Model<RefreshTokenDocument>,
   ) {}
@@ -65,6 +67,14 @@ export class AuthService {
       this.logger.log(
         `User ${email} created successfully with id: ${newUser._id}`,
       );
+
+      this.mailService
+        .sendWelcomeEmail(newUser.email, newUser.username)
+        .catch((error) => {
+          this.logger.error(
+            `Failed to send welcome email: ${error instanceof Error ? error.message : error}`,
+          );
+        });
 
       const payload: JwtPayload = {
         sub: newUser._id,

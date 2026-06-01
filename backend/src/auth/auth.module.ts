@@ -11,6 +11,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.gurad';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.
         },
       }),
     }),
+    MailModule,
     forwardRef(() => UserModule),
   ],
   controllers: [AuthController],

@@ -17,6 +17,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import Redis from 'ioredis';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { MailModule } from './mail/mail.module';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
@@ -42,6 +44,12 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
         CLOUDINARY_CLOUD_NAME: Joi.string().required(),
         CLOUDINARY_API_KEY: Joi.string().required(),
         CLOUDINARY_API_SECRET: Joi.string().required(),
+        EMAIL_HOST: Joi.string().required(),
+        EMAIL_USERNAME: Joi.string().required(),
+        EMAIL_PASSWORD: Joi.string().required(),
+        EMAIL_PORT: Joi.string().required(),
+        EMAIL_FROM: Joi.string().required(),
+        FRONTEND_URL: Joi.string().required(),
       }),
     }),
     MongooseModule.forRoot(process.env.MONGO_URL!),
@@ -108,6 +116,22 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('EMAIL_HOST'),
+          port: config.get<number>('EMAIL_PORT', 587),
+          secure: false, // true for port 465
+          auth: {
+            user: config.get<string>('EMAIL_USERNAME'),
+            pass: config.get<string>('EMAIL_PASSWORD'),
+          },
+        },
+      }),
+    }),
+    MailModule,
   ],
   controllers: [AppController],
   providers: [
