@@ -2,7 +2,7 @@ import mongoose, { HydratedDocument } from 'mongoose';
 import { Notification, NotificationType } from '../types/notification.type';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-export type NotifcationDocument = HydratedDocument<Notification>;
+export type NotificationDocument = HydratedDocument<Notification>;
 
 @Schema({
   timestamps: true,

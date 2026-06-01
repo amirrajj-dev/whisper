@@ -40,16 +40,16 @@ export class MessageModel {
   })
   publicId?: string; // Cloudinary public ID for file deletion
   @Prop({
-    type: Boolean,
-    required: true,
-    default: false,
-  })
-  @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message',
     required: false,
   })
   replyTo?: string; // Reference to the message being replied to
+  @Prop({
+    type: Boolean,
+    required: true,
+    default: false,
+  })
   edited: boolean;
   @Prop({
     type: Boolean,

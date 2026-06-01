@@ -23,12 +23,6 @@ export class ConversationModel {
   @Prop({ type: String, trim: true, required: false })
   avatarUrl?: string;
   @Prop({
-    type: [mongoose.Schema.Types.ObjectId],
-    default: [],
-    ref: 'User',
-    required: true,
-  })
-  @Prop({
     type: String,
     required: false,
   })
