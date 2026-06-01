@@ -19,6 +19,8 @@ import Redis from 'ioredis';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { HealthModule } from './health/health.module';
+import { HealthService } from './health/health.service';
 
 @Module({
   imports: [
@@ -52,7 +54,12 @@ import { MailerModule } from '@nestjs-modules/mailer';
         FRONTEND_URL: Joi.string().required(),
       }),
     }),
-    MongooseModule.forRoot(process.env.MONGO_URL!),
+    MongooseModule.forRoot(process.env.MONGO_URL!, {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -60,7 +67,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
         pinoHttp: {
           level: config.get<string>('LOG_LEVEL', 'info'),
           transport:
-            config.get<string>('NODE_ENV', 'development') === 'development'
+            config.get<string>('NODE_ENV') === 'development'
               ? {
                   target: 'pino-pretty',
                   options: {
@@ -72,14 +79,26 @@ import { MailerModule } from '@nestjs-modules/mailer';
               : {
                   targets: [
                     {
-                      target: 'pino/file',
+                      target: 'pino-roll',
                       level: 'info',
-                      options: { destination: './logs/app.log', mkdir: true },
+                      options: {
+                        file: './logs/app.log',
+                        frequency: 'daily',
+                        size: '10m',
+                        mkdir: true,
+                        limit: { count: 14 }, // Keep 14 days of info logs
+                      },
                     },
                     {
-                      target: 'pino/file',
+                      target: 'pino-roll',
                       level: 'error',
-                      options: { destination: './logs/error.log', mkdir: true },
+                      options: {
+                        file: './logs/error.log',
+                        frequency: 'daily',
+                        size: '10m',
+                        mkdir: true,
+                        limit: { count: 30 }, // Keep 30 days of error logs
+                      },
                     },
                   ],
                 },
@@ -132,10 +151,12 @@ import { MailerModule } from '@nestjs-modules/mailer';
       }),
     }),
     MailModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    HealthService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
