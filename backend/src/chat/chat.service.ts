@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import mongoose, { Model } from 'mongoose';
 import { AddParticipantsDto } from 'src/common/dtos/chat/add-participants.dto';
 import { CreateConversationDto } from 'src/common/dtos/chat/create-conversation.dto';
@@ -15,6 +16,7 @@ import { SendMessageDto } from 'src/common/dtos/chat/send-message.dto';
 import { UpdateConversationDto } from 'src/common/dtos/chat/update-conversation.dto';
 import { ConversationDocument } from 'src/common/schemas/conversation.schema';
 import { MessageDocument } from 'src/common/schemas/message.schema';
+import { ChatEvents } from 'src/common/constants/events.constants';
 import { UploadService } from 'src/upload/upload.service';
 import { UserService } from 'src/user/user.service';
 
@@ -27,6 +29,7 @@ export class ChatService {
     @InjectModel('Message') private messageModel: Model<MessageDocument>,
     private readonly userService: UserService,
     private readonly uploadService: UploadService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getUserConversations(
@@ -123,6 +126,12 @@ export class ChatService {
         },
       );
 
+      this.eventEmitter.emit(ChatEvents.MESSAGE_READ, {
+        conversationId,
+        userId,
+        readAt: new Date(),
+      });
+
       this.logger.log(
         `Fetched ${messages.length} messages for conversation ${conversationId}`,
       );
@@ -193,7 +202,6 @@ export class ChatService {
     try {
       // Validate participants exist
       const participants = [...new Set([currentUserId, ...data.participants])];
-
       // Check if all participants exist
       for (const participantId of participants) {
         const user = await this.userService.findUserById(participantId);
@@ -275,11 +283,19 @@ export class ChatService {
         `Conversation created: type=${data.type}, id=${conversation._id}, participants=${participants.length}`,
       );
 
-      return this.conversationModel
+      const populatedConversation = await this.conversationModel
         .findById(conversation._id)
         .populate('participants', 'username email avatarUrl lastSeen')
         .populate('createdBy', 'username email avatarUrl')
         .exec();
+
+      this.eventEmitter.emit(ChatEvents.CONVERSATION_CREATED, {
+        conversationId: conversation._id.toString(),
+        participants,
+        conversation: populatedConversation,
+      });
+
+      return populatedConversation;
     } catch (error) {
       this.logger.error(
         `Error creating conversation: ${error instanceof Error ? error.message : error}`,
@@ -358,6 +374,12 @@ export class ChatService {
       this.logger.log(
         `Added ${newUserIds.length} participants to conversation ${conversationId}`,
       );
+
+      this.eventEmitter.emit(ChatEvents.PARTICIPANT_ADDED, {
+        conversationId,
+        newParticipants: newUserIds,
+        addedBy: currentUserId,
+      });
 
       // Return updated conversation
       return this.conversationModel
@@ -439,6 +461,13 @@ export class ChatService {
         `User ${targetUserId} promoted to admin in conversation ${conversationId}`,
       );
 
+      this.eventEmitter.emit(ChatEvents.PARTICIPANT_ROLE_CHANGED, {
+        conversationId,
+        targetUserId,
+        isPromotion: true,
+        promotedBy: currentUserId,
+      });
+
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
@@ -514,6 +543,13 @@ export class ChatService {
         `User ${targetUserId} demoted from admin in conversation ${conversationId}`,
       );
 
+      this.eventEmitter.emit(ChatEvents.PARTICIPANT_ROLE_CHANGED, {
+        conversationId,
+        targetUserId,
+        isPromotion: false,
+        demotedBy: currentUserId,
+      });
+
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
@@ -584,6 +620,12 @@ export class ChatService {
         `Ownership of conversation ${conversationId} transferred from ${currentUserId} to ${newOwnerId}`,
       );
 
+      this.eventEmitter.emit(ChatEvents.OWNERSHIP_TRANSFERRED, {
+        conversationId,
+        newOwnerId,
+        previousOwnerId: currentUserId,
+      });
+
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
@@ -611,14 +653,14 @@ export class ChatService {
 
       // Check if conversation exists and user is participant
       const conversation = await this.conversationModel.findById(
-        data.conversationId,
+        new mongoose.Types.ObjectId(data.conversationId),
       );
       if (!conversation) {
         throw new NotFoundException('Conversation not found');
       }
 
       const isParticipant = conversation.participants.some(
-        (p) => p.toString() === senderId,
+        (p) => p.toString() === senderId.toString(),
       );
       if (!isParticipant) {
         throw new UnauthorizedException(
@@ -702,12 +744,27 @@ export class ChatService {
 
       this.logger.log(`Message sent to conversation ${data.conversationId}`);
 
-      // Return populated message
-      return this.messageModel
+      const populatedMessage = await this.messageModel
         .findById(message._id)
         .populate('senderId', 'username email avatarUrl')
-        .populate('replyTo', 'content type senderId') // Add this
+        .populate('replyTo', 'content type senderId')
         .exec();
+
+      const senderObj = populatedMessage?.senderId as
+        | { username?: string }
+        | undefined;
+      this.eventEmitter.emit(ChatEvents.MESSAGE_SENT, {
+        conversationId: data.conversationId,
+        messageId: message._id.toString(),
+        senderId,
+        senderUsername: senderObj?.username || 'Unknown',
+        type: data.type,
+        content,
+        participants: conversation.participants.map((p) => p.toString()),
+        message: populatedMessage,
+      });
+
+      return populatedMessage;
     } catch (error) {
       this.logger.error(
         `Error sending message: ${error instanceof Error ? error.message : error}`,
@@ -760,6 +817,13 @@ export class ChatService {
       await message.save();
 
       this.logger.log(`Message ${messageId} deleted by user ${userId}`);
+
+      this.eventEmitter.emit(ChatEvents.MESSAGE_DELETED, {
+        conversationId: message.conversationId.toString(),
+        messageId: message._id.toString(),
+        deletedBy: userId,
+      });
+
       return { message: 'Message deleted successfully' };
     } catch (error) {
       this.logger.error(
@@ -855,6 +919,12 @@ export class ChatService {
         `User ${targetUserId} removed from conversation ${conversationId}`,
       );
 
+      this.eventEmitter.emit(ChatEvents.PARTICIPANT_REMOVED, {
+        conversationId,
+        removedUserId: targetUserId,
+        removedBy: currentUserId,
+      });
+
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
@@ -939,6 +1009,11 @@ export class ChatService {
 
       this.logger.log(`Conversation ${conversationId} updated successfully`);
 
+      this.eventEmitter.emit(ChatEvents.CONVERSATION_UPDATED, {
+        conversationId,
+        updatedBy: currentUserId,
+      });
+
       return updatedConversation;
     } catch (error) {
       this.logger.error(
@@ -985,11 +1060,20 @@ export class ChatService {
 
       this.logger.log(`Message ${messageId} edited by user ${userId}`);
 
-      // Return updated message
-      return this.messageModel
+      const updatedMessage = await this.messageModel
         .findById(messageId)
         .populate('senderId', 'username email avatarUrl')
         .exec();
+
+      this.eventEmitter.emit(ChatEvents.MESSAGE_EDITED, {
+        conversationId: message.conversationId.toString(),
+        messageId: message._id.toString(),
+        senderId: userId,
+        content: data.content,
+        message: updatedMessage,
+      });
+
+      return updatedMessage;
     } catch (error) {
       this.logger.error(
         `Error editing message: ${error instanceof Error ? error.message : error}`,
@@ -1046,6 +1130,11 @@ export class ChatService {
         this.logger.log(
           `Conversation ${conversationId} deleted by user ${currentUserId}`,
         );
+
+        this.eventEmitter.emit(ChatEvents.CONVERSATION_DELETED, {
+          conversationId,
+          deletedBy: currentUserId,
+        });
       } catch (err) {
         await session.abortTransaction();
         throw err;
