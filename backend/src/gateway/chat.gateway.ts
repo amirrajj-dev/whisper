@@ -27,6 +27,9 @@ export class ChatGateway
   @WebSocketServer()
   server: Server;
 
+  private readonly typingLimiter = new Map<string, number>();
+  private readonly readLimiter = new Map<string, number>();
+
   constructor(
     private readonly gatewayService: GatewayService,
     private readonly jwtService: JwtService,
@@ -95,6 +98,10 @@ export class ChatGateway
     const userId = this.gatewayService.unregisterSocket(client.id);
     if (!userId) return;
 
+    if (userId) {
+      this.typingLimiter.delete(userId);
+    }
+
     const conversationIds: string[] = client.data?.conversationIds ?? [];
 
     await this.userModel.findByIdAndUpdate(userId, { lastSeen: new Date() });
@@ -130,8 +137,18 @@ export class ChatGateway
   @SubscribeMessage('typing:start')
   handleTypingStart(client: Socket, payload: { conversationId: string }): void {
     if (!payload?.conversationId) return;
+
+    const userId = client.data.user.id;
+    const now = Date.now();
+    const lastTyping = this.typingLimiter.get(userId) || 0;
+
+    // Limit to 1 typing event per 2 seconds
+    if (now - lastTyping < 2000) return;
+
+    this.typingLimiter.set(userId, now);
+
     client.to(`conversation:${payload.conversationId}`).emit('user:typing', {
-      userId: client.data.user.id,
+      userId,
       conversationId: payload.conversationId,
     });
   }
@@ -153,14 +170,23 @@ export class ChatGateway
     payload: { conversationId: string; messageId: string },
   ): Promise<void> {
     if (!payload?.conversationId || !payload?.messageId) return;
+
+    const userId = client.data.user.id;
+    const now = Date.now();
+    const lastRead = this.readLimiter.get(userId) || 0;
+
+    // Limit to 1 read receipt per second
+    if (now - lastRead < 1000) return;
+
+    this.readLimiter.set(userId, now);
+
     await this.messageModel.updateOne(
       { _id: payload.messageId },
-      { $addToSet: { readBy: client.data.user.id } },
+      { $addToSet: { readBy: userId } },
     );
 
-    // Broadcast to room
     client.to(`conversation:${payload.conversationId}`).emit('message:read', {
-      userId: client.data.user.id,
+      userId,
       conversationId: payload.conversationId,
       messageId: payload.messageId,
       readAt: new Date().toISOString(),
@@ -168,13 +194,7 @@ export class ChatGateway
   }
 
   private extractToken(client: Socket): string | null {
-    const auth = client.handshake.auth?.token as string | undefined;
-    const query = client.handshake.query?.token as string | undefined;
-    const rawToken = auth || query;
-    if (!rawToken) return null;
-    if (rawToken.startsWith('Bearer ')) {
-      return rawToken.slice(7);
-    }
-    return rawToken;
+    const auth = client.handshake.headers.authorization;
+    return auth?.startsWith('Bearer ') ? auth.slice(7) : auth || null;
   }
 }

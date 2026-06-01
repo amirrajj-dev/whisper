@@ -19,6 +19,7 @@ import { MessageDocument } from 'src/common/schemas/message.schema';
 import { ChatEvents } from 'src/common/constants/events.constants';
 import { UploadService } from 'src/upload/upload.service';
 import { UserService } from 'src/user/user.service';
+import { UserDocument } from 'src/common/schemas/user.schema';
 
 @Injectable()
 export class ChatService {
@@ -27,6 +28,7 @@ export class ChatService {
     @InjectModel('Conversation')
     private conversationModel: Model<ConversationDocument>,
     @InjectModel('Message') private messageModel: Model<MessageDocument>,
+    @InjectModel('User') private userModel: Model<UserDocument>,
     private readonly userService: UserService,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
@@ -42,19 +44,38 @@ export class ChatService {
       const skip = (page - 1) * safeLimit;
 
       const [conversations, total] = await Promise.all([
-        this.conversationModel
-          .find({ participants: { $in: [userId] } })
-          .lean()
-          .populate('participants', 'username email avatarUrl lastSeen')
-          .populate('createdBy', 'username email avatarUrl')
-          .populate('lastMessage')
-          .sort({ lastMessageAt: -1 })
-          .skip(skip)
-          .limit(safeLimit)
-          .exec(),
-        this.conversationModel.countDocuments({
-          participants: { $in: [userId] },
-        }),
+        this.conversationModel.aggregate([
+          { $match: { participants: new mongoose.Types.ObjectId(userId) } },
+          { $sort: { lastMessageAt: -1 } },
+          { $skip: skip },
+          { $limit: safeLimit },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'participants',
+              foreignField: '_id',
+              as: 'participants',
+            },
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'createdBy',
+              foreignField: '_id',
+              as: 'createdBy',
+            },
+          },
+          { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              'participants.password': 0,
+              'participants.__v': 0,
+              'createdBy.password': 0,
+              'createdBy.__v': 0,
+            },
+          },
+        ]),
+        this.conversationModel.countDocuments({ participants: userId }),
       ]);
       this.logger.log(
         `User ${userId} fetched ${conversations.length} conversations`,
@@ -111,6 +132,7 @@ export class ChatService {
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(safeLimit)
+          .lean()
           .exec(),
         this.messageModel.countDocuments({ conversationId }),
       ]);
@@ -203,14 +225,16 @@ export class ChatService {
       // Validate participants exist
       const participants = [...new Set([currentUserId, ...data.participants])];
       // Check if all participants exist
-      for (const participantId of participants) {
-        const user = await this.userService.findUserById(participantId);
-        if (!user) {
-          this.logger.warn(
-            `User ${participantId} not found while creating conversation`,
-          );
-          throw new NotFoundException(`User ${participantId} not found`);
-        }
+      const existingUsers = await this.userModel
+        .find({
+          _id: { $in: participants },
+        })
+        .select('_id');
+      if (existingUsers.length !== participants.length) {
+        const missing = participants.filter(
+          (p) => !existingUsers.some((u) => u._id.toString() === p),
+        );
+        throw new NotFoundException(`Users not found: ${missing.join(', ')}`);
       }
 
       // Upload avatar if provided

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationService } from './notification.service';
 import { ChatEvents } from 'src/common/constants/events.constants';
@@ -6,6 +6,7 @@ import { GatewayService } from 'src/gateway/gateway.service';
 
 @Injectable()
 export class NotificationListener {
+  private readonly logger = new Logger(NotificationListener.name);
   constructor(
     private readonly notificationService: NotificationService,
     private readonly gatewayService: GatewayService,
@@ -29,26 +30,43 @@ export class NotificationListener {
       (id) => id !== senderId,
     );
 
-    for (const userId of otherParticipants) {
-      await this.notificationService.create({
-        userId,
-        type: 'message',
-        relatedConversation: conversationId,
-        message: `${senderUsername}: ${notificationMessage}`,
-      });
-    }
+    // Parallel execution (not sequential)
+    await Promise.all(
+      otherParticipants.map((userId) =>
+        this.notificationService
+          .create({
+            userId,
+            type: 'message',
+            relatedConversation: conversationId,
+            message: `${senderUsername}: ${notificationMessage}`,
+          })
+          .catch((error) => {
+            this.logger?.error?.(
+              `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
+            );
+          }),
+      ),
+    );
   }
 
   @OnEvent(ChatEvents.PARTICIPANT_ADDED)
   async handleParticipantAdded(payload: any) {
-    for (const userId of payload.newParticipants) {
-      await this.notificationService.create({
-        userId,
-        type: 'system',
-        relatedConversation: payload.conversationId,
-        message: `You were added to the group`,
-      });
-    }
+    await Promise.all(
+      payload.newParticipants.map((userId: string) =>
+        this.notificationService
+          .create({
+            userId,
+            type: 'system',
+            relatedConversation: payload.conversationId,
+            message: `You were added to the group`,
+          })
+          .catch((error) => {
+            this.logger?.error?.(
+              `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
+            );
+          }),
+      ),
+    );
   }
 
   @OnEvent(ChatEvents.PARTICIPANT_REMOVED)
