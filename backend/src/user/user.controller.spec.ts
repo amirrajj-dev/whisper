@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 describe('UserController', () => {
   let controller: UserController;

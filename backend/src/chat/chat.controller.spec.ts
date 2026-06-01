@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 describe('ChatController', () => {
   let controller: ChatController;

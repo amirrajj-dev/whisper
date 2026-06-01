@@ -16,7 +16,7 @@ import { LoginDto } from 'src/common/dtos/auth/login.dto';
 import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
-import { JwtAuthGuard } from './jwt-auth.gurad';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import {
   ACCESS_TOKEN_COOKIE,
   ACCESS_TOKEN_EXPIRY,

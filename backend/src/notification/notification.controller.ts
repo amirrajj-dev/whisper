@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
 import { PaginationDto } from 'src/common/dtos/pagination/pagination.dto';

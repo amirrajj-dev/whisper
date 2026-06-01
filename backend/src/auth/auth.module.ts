@@ -9,7 +9,7 @@ import { UserModule } from 'src/user/user.module';
 import { RefreshTokenSchema } from 'src/common/schemas/refresh-token.schema';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
-import { JwtAuthGuard } from './jwt-auth.gurad';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 import { MailModule } from 'src/mail/mail.module';
 

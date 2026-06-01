@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GatewayController } from './gateway.controller';
 import { GatewayService } from './gateway.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.gurad';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('GatewayController', () => {
