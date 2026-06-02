@@ -30,14 +30,25 @@ import { Throttle } from '@nestjs/throttler';
 import { UpdateConversationDto } from 'src/common/dtos/chat/update-conversation.dto';
 import { EditMessageDto } from 'src/common/dtos/chat/edit-message.dto';
 import { TransferOwnershipDto } from 'src/common/dtos/chat/transfer-ownership.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 
+@ApiTags('Chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get user conversations (paginated)' })
+  @ApiResponse({ status: 200, description: 'List of conversations' })
   async getUserConversations(
     @CurrentUser() user: Omit<User, 'password'>,
     @Query() pagination: PaginationDto,
@@ -51,6 +62,9 @@ export class ChatController {
 
   @Get('conversations/:id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get conversation by ID' })
+  @ApiResponse({ status: 200, description: 'Conversation details' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
   async getConversationById(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') conversationId: string,
@@ -60,6 +74,8 @@ export class ChatController {
 
   @Get('messages/:conversationId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get messages for a conversation (paginated)' })
+  @ApiResponse({ status: 200, description: 'List of messages' })
   async getMessages(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('conversationId') conversationId: string,
@@ -73,10 +89,20 @@ export class ChatController {
     );
   }
 
-  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 per hour
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post('conversations')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('avatar', AVATAR_VALIDATION))
+  @ApiOperation({ summary: 'Create a new conversation' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description: 'Conversation created successfully',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests (max 5 per hour)',
+  })
   async createConversation(
     @CurrentUser() user: Omit<User, 'password'>,
     @Body() data: CreateConversationDto,
@@ -87,6 +113,8 @@ export class ChatController {
 
   @Post('conversations/:id/participants')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Add participants to a conversation' })
+  @ApiResponse({ status: 201, description: 'Participants added successfully' })
   addParticipants(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') conversationId: string,
@@ -97,6 +125,8 @@ export class ChatController {
 
   @Post('conversations/:conversationId/admins/:userId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Promote a user to admin' })
+  @ApiResponse({ status: 200, description: 'User promoted to admin' })
   promoteToAdmin(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('conversationId') conversationId: string,
@@ -111,6 +141,8 @@ export class ChatController {
 
   @Post('conversations/:conversationId/owner')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Transfer conversation ownership' })
+  @ApiResponse({ status: 200, description: 'Ownership transferred' })
   transferOwnership(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('conversationId') conversationId: string,
@@ -127,6 +159,9 @@ export class ChatController {
   @Post('messages')
   @UseInterceptors(FileInterceptor('file', FILE_VALIDATION))
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Send a message to a conversation' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Message sent successfully' })
   async sendMessage(
     @CurrentUser() user: Omit<User, 'password'>,
     @Body() data: SendMessageDto,
@@ -137,6 +172,8 @@ export class ChatController {
 
   @Delete('conversations/:conversationId/admins/:userId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Demote a user from admin' })
+  @ApiResponse({ status: 200, description: 'User demoted from admin' })
   demoteFromAdmin(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('conversationId') conversationId: string,
@@ -151,6 +188,8 @@ export class ChatController {
 
   @Delete('messages/:id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a message' })
+  @ApiResponse({ status: 200, description: 'Message deleted' })
   async deleteMessage(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') messageId: string,
@@ -160,6 +199,8 @@ export class ChatController {
 
   @Delete('conversations/:id/participants/:userId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a participant from conversation' })
+  @ApiResponse({ status: 200, description: 'Participant removed' })
   removeParticipant(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') conversationId: string,
@@ -174,6 +215,8 @@ export class ChatController {
 
   @Delete('conversations/:conversationId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation deleted' })
   deleteConversation(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('conversationId') conversationId: string,
@@ -184,6 +227,9 @@ export class ChatController {
   @Patch('conversations/:id')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('avatar', AVATAR_VALIDATION))
+  @ApiOperation({ summary: 'Update conversation details' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Conversation updated' })
   updateConversation(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') conversationId: string,
@@ -200,6 +246,8 @@ export class ChatController {
 
   @Patch('messages/:id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Edit a message' })
+  @ApiResponse({ status: 200, description: 'Message edited' })
   editMessage(
     @CurrentUser() user: Omit<User, 'password'>,
     @Param('id') messageId: string,

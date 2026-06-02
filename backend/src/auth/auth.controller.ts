@@ -26,7 +26,15 @@ import {
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 import { Throttle } from '@nestjs/throttler';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -36,6 +44,19 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('register')
+  @ApiOperation({ summary: 'Register a new user account' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or email already in use',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests (max 3 per hour)',
+  })
   async register(
     @Body(RestrictEmailDomainPipe) signupDto: SignupDto,
     @Res({ passthrough: true }) res: Response,
@@ -62,6 +83,17 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful, tokens set as cookies',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests (max 3 per hour)',
+  })
   async login(
     @Body(RestrictEmailDomainPipe) loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -87,6 +119,12 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens refreshed successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async refresh(
     @Body('refresh_token') bodyToken: string,
     @Req() req: Request,
@@ -123,6 +161,10 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Logout and invalidate refresh token' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logout(
     @CurrentUser() user: Omit<User, 'password'>,
     @Res({ passthrough: true }) res: Response,
@@ -135,6 +177,10 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get current authenticated user profile' })
+  @ApiResponse({ status: 200, description: 'Current user profile' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getMe(@CurrentUser() user: Omit<User, 'password'>) {
     return user;
   }
