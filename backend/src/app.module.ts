@@ -27,7 +27,8 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: '.env',
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.dev',
       isGlobal: true,
       validationSchema: Joi.object({
         PORT: Joi.number().default(3000),
