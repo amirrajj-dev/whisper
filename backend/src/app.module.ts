@@ -37,6 +37,7 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
         JWT_SECRET: Joi.string().required(),
         ACCESS_TOKEN_EXPIRES_IN: Joi.string().default('15m'),
         REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('30d'),
+        BCRYPT_SALT_ROUNDS: Joi.number().required().default(10),
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
