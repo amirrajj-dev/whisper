@@ -21,6 +21,8 @@ import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HealthModule } from './health/health.module';
 import { HealthService } from './health/health.service';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis, { Keyv } from '@keyv/redis';
 
 @Module({
   imports: [
@@ -118,6 +120,19 @@ import { HealthService } from './health/health.service';
         storage: new ThrottlerStorageRedisService(
           new Redis(process.env.REDIS_URL as string),
         ),
+      }),
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        stores: [
+          new Keyv({
+            store: new KeyvRedis(config.get<string>('REDIS_URL')),
+          }),
+        ],
+        ttl: 1000 * 60 * 5, // 5 minutes
       }),
     }),
     UserModule,

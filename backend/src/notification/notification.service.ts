@@ -1,4 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { NotificationDocument } from 'src/common/schemas/notification.schema';
@@ -11,6 +13,7 @@ export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel('Notification')
     private notificationModel: Model<NotificationDocument>,
     private readonly gatewayService: GatewayService,
@@ -116,12 +119,26 @@ export class NotificationService {
   }
 
   async getUnreadCount(userId: string) {
+    const cacheKey = `unread_count:${userId}`;
+    try {
+      const cached = await this.cacheManager.get<{ count: number }>(cacheKey);
+      if (cached) return cached;
+    } catch {
+      this.logger.warn('Cache unavailable, falling through to DB');
+    }
+
     try {
       const count = await this.notificationModel.countDocuments({
         userId,
         isRead: false,
       });
-      return { count };
+      const result = { count };
+      try {
+        await this.cacheManager.set(cacheKey, result, 1000 * 10);
+      } catch {
+        this.logger.warn('Failed to set cache, non-critical');
+      }
+      return result;
     } catch (error) {
       this.logger.error(
         `Error getting unread count: ${error instanceof Error ? error.message : error}`,

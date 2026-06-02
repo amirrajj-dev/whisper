@@ -1,11 +1,14 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import mongoose, { Model } from 'mongoose';
@@ -25,6 +28,7 @@ import { UserDocument } from 'src/common/schemas/user.schema';
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel('Conversation')
     private conversationModel: Model<ConversationDocument>,
     @InjectModel('Message') private messageModel: Model<MessageDocument>,
@@ -34,13 +38,49 @@ export class ChatService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  private async getConversationCacheVersion(userId: string): Promise<number> {
+    try {
+      const verKey = `conv_ver:${userId}`;
+      return (await this.cacheManager.get<number>(verKey)) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async invalidateConversationCache(userId: string): Promise<void> {
+    try {
+      const verKey = `conv_ver:${userId}`;
+      const ver = (await this.cacheManager.get<number>(verKey)) || 0;
+      await this.cacheManager.set(verKey, ver + 1, 1000 * 60 * 5);
+    } catch {
+      this.logger.warn('Cache invalidation failed, non-critical');
+    }
+  }
+
+  private async invalidateConversationCacheForUsers(
+    userIds: string[],
+  ): Promise<void> {
+    await Promise.all(
+      userIds.map((id) => this.invalidateConversationCache(id)),
+    );
+  }
+
   async getUserConversations(
     userId: string,
     page: number = 1,
     limit: number = 20,
   ) {
+    const safeLimit = Math.min(limit, 50);
+    const version = await this.getConversationCacheVersion(userId);
+    const cacheKey = `conversations:${userId}:${page}:${safeLimit}:v${version}`;
     try {
-      const safeLimit = Math.min(limit, 50);
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
+    } catch {
+      this.logger.warn('Cache unavailable, falling through to DB');
+    }
+
+    try {
       const skip = (page - 1) * safeLimit;
 
       const [conversations, total] = await Promise.all([
@@ -81,12 +121,20 @@ export class ChatService {
         `User ${userId} fetched ${conversations.length} conversations`,
       );
 
-      return {
+      const result = {
         conversations,
         total,
         page,
         totalPages: Math.ceil(total / safeLimit),
       };
+
+      try {
+        await this.cacheManager.set(cacheKey, result, 1000 * 30);
+      } catch {
+        this.logger.warn('Failed to set cache, non-critical');
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(
         `Error fetching conversations for user ${userId}: ${error instanceof Error ? error.message : error}`,
@@ -313,6 +361,8 @@ export class ChatService {
         .populate('createdBy', 'username email avatarUrl')
         .exec();
 
+      await this.invalidateConversationCacheForUsers(participants);
+
       this.eventEmitter.emit(ChatEvents.CONVERSATION_CREATED, {
         conversationId: conversation._id.toString(),
         participants,
@@ -398,6 +448,8 @@ export class ChatService {
       this.logger.log(
         `Added ${newUserIds.length} participants to conversation ${conversationId}`,
       );
+
+      await this.invalidateConversationCacheForUsers(newUserIds);
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ADDED, {
         conversationId,
@@ -777,6 +829,8 @@ export class ChatService {
       const senderObj = populatedMessage?.senderId as
         | { username?: string }
         | undefined;
+      const participantIds = conversation.participants.map((p) => p.toString());
+      await this.invalidateConversationCacheForUsers(participantIds);
       this.eventEmitter.emit(ChatEvents.MESSAGE_SENT, {
         conversationId: data.conversationId,
         messageId: message._id.toString(),
@@ -784,7 +838,7 @@ export class ChatService {
         senderUsername: senderObj?.username || 'Unknown',
         type: data.type,
         content,
-        participants: conversation.participants.map((p) => p.toString()),
+        participants: participantIds,
         message: populatedMessage,
       });
 
@@ -943,6 +997,9 @@ export class ChatService {
         `User ${targetUserId} removed from conversation ${conversationId}`,
       );
 
+      await this.invalidateConversationCache(targetUserId);
+      await this.invalidateConversationCache(currentUserId);
+
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_REMOVED, {
         conversationId,
         removedUserId: targetUserId,
@@ -1032,6 +1089,11 @@ export class ChatService {
         .exec();
 
       this.logger.log(`Conversation ${conversationId} updated successfully`);
+
+      const updateParticipants = conversation.participants.map((p) =>
+        p.toString(),
+      );
+      await this.invalidateConversationCacheForUsers(updateParticipants);
 
       this.eventEmitter.emit(ChatEvents.CONVERSATION_UPDATED, {
         conversationId,
@@ -1154,6 +1216,11 @@ export class ChatService {
         this.logger.log(
           `Conversation ${conversationId} deleted by user ${currentUserId}`,
         );
+
+        const deleteParticipants = conversation.participants.map((p) =>
+          p.toString(),
+        );
+        await this.invalidateConversationCacheForUsers(deleteParticipants);
 
         this.eventEmitter.emit(ChatEvents.CONVERSATION_DELETED, {
           conversationId,

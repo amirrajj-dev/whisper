@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
@@ -14,6 +17,7 @@ import { UploadService } from 'src/upload/upload.service';
 export class UserService {
   private readonly logger = new Logger(UserService.name);
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel('User') private userModel: Model<UserDocument>,
     private readonly uploadService: UploadService,
   ) {}
@@ -28,6 +32,19 @@ export class UserService {
     page: number;
     totalPages: number;
   }> {
+    const cacheKey = `users:${currentUserId}:${page}:${limit}`;
+    try {
+      const cached = await this.cacheManager.get<{
+        users: Omit<UserDocument, 'password'>[];
+        total: number;
+        page: number;
+        totalPages: number;
+      }>(cacheKey);
+      if (cached) return cached;
+    } catch {
+      this.logger.warn('Cache unavailable, falling through to DB');
+    }
+
     try {
       const skip = (page - 1) * limit;
 
@@ -47,12 +64,20 @@ export class UserService {
         `Fetched ${users.length} users (page ${page}, limit ${limit})`,
       );
 
-      return {
+      const result = {
         users,
         total,
         page,
         totalPages: Math.ceil(total / limit),
       };
+
+      try {
+        await this.cacheManager.set(cacheKey, result, 1000 * 60 * 2);
+      } catch {
+        this.logger.warn('Failed to set cache, non-critical');
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(
         `Error fetching users: ${error instanceof Error ? error.message : error}`,
@@ -66,13 +91,39 @@ export class UserService {
     return this.userModel.findOne({ email }).exec();
   }
 
-  findUserById(id: string): Promise<UserDocument | null> {
+  async findUserById(
+    id: string,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
+    const cacheKey = `user:${id}`;
+    try {
+      const cached = await this.cacheManager.get<Omit<
+        UserDocument,
+        'password'
+      > | null>(cacheKey);
+      if (cached !== undefined) return cached;
+    } catch {
+      this.logger.warn('Cache unavailable, falling through to DB');
+    }
+
     this.logger.debug(`Finding user by id: ${id}`);
     const objectId = new mongoose.Types.ObjectId(id);
-    return this.userModel
+    const user = await this.userModel
       .findById(objectId, '-password -__v')
       .populate('blockedUsers', 'username email avatarUrl')
       .exec();
+
+    if (user) {
+      try {
+        await this.cacheManager.set(
+          cacheKey,
+          user.toObject({ virtuals: true }),
+          1000 * 60 * 5,
+        );
+      } catch {
+        this.logger.warn('Failed to set cache, non-critical');
+      }
+    }
+    return user;
   }
 
   createUser(data: {
@@ -180,6 +231,12 @@ export class UserService {
         throw new NotFoundException('User not found');
       }
 
+      try {
+        await this.cacheManager.del(`user:${id}`);
+      } catch {
+        this.logger.warn('Failed to invalidate cache, non-critical');
+      }
+
       this.logger.log(`User updated successfully: ${id}`);
       return updatedUser;
     } catch (error) {
@@ -201,11 +258,26 @@ export class UserService {
   }
 
   async getBlockedUsers(userId: string): Promise<string[]> {
+    const cacheKey = `blocked:${userId}`;
+    try {
+      const cached = await this.cacheManager.get<string[]>(cacheKey);
+      if (cached) return cached;
+    } catch {
+      this.logger.warn('Cache unavailable, falling through to DB');
+    }
+
     const user = await this.userModel
       .findById(userId)
       .select('blockedUsers')
       .exec();
-    return user?.blockedUsers || [];
+    const blockedUsers = user?.blockedUsers?.map((id) => id.toString()) || [];
+
+    try {
+      await this.cacheManager.set(cacheKey, blockedUsers, 1000 * 60 * 2);
+    } catch {
+      this.logger.warn('Failed to set cache, non-critical');
+    }
+    return blockedUsers;
   }
 
   async blockUser(currentUserId: string, targetUserId: string) {
@@ -240,6 +312,12 @@ export class UserService {
         updatedAt: new Date(),
       });
 
+      try {
+        await this.cacheManager.del(`blocked:${currentUserId}`);
+      } catch {
+        this.logger.warn('Failed to invalidate cache, non-critical');
+      }
+
       this.logger.log(`User ${currentUserId} blocked ${targetUserId}`);
 
       return { message: 'User blocked successfully' };
@@ -268,6 +346,12 @@ export class UserService {
         $pull: { blockedUsers: new mongoose.Types.ObjectId(targetUserId) },
         updatedAt: new Date(),
       });
+
+      try {
+        await this.cacheManager.del(`blocked:${currentUserId}`);
+      } catch {
+        this.logger.warn('Failed to invalidate cache, non-critical');
+      }
 
       this.logger.log(`User ${currentUserId} unblocked ${targetUserId}`);
 
