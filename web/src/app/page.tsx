@@ -1,9 +1,43 @@
+'use client'
 
+import { Hero } from '@/src/components/home/hero'
+import { Features } from '@/src/components/home/features'
+import { Showcase } from '@/src/components/home/showcase'
+import { Stats } from '@/src/components/home/stats'
+import { ThemeShowcase } from '@/src/components/home/theme-showcase'
+import { Testimonials } from '@/src/components/home/testimonials'
+import { CTA } from '@/src/components/home/cta'
+import { Footer } from '@/src/components/home/footer'
+import { Navbar } from '@/src/components/home/navbar'
 
-const Home = () => {
+function SectionDivider() {
   return (
-    <div>Home</div>
+    <div className="relative h-24 md:h-32">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+    </div>
   )
 }
 
-export default Home
+export default function Home() {
+  return (
+    <>
+      <Navbar />
+      <main>
+        <Hero />
+        <SectionDivider />
+        <Features />
+        <SectionDivider />
+        <Stats />
+        <SectionDivider />
+        <Showcase />
+        <SectionDivider />
+        <ThemeShowcase />
+        <SectionDivider />
+        <Testimonials />
+        <SectionDivider />
+        <CTA />
+      </main>
+      <Footer />
+    </>
+  )
+}
