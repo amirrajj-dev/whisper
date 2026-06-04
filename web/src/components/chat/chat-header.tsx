@@ -5,7 +5,9 @@ import type { Conversation } from '@/src/types/entities/conversation';
 import type { PopulatedUser } from '@/src/types/entities/user';
 import { UserAvatar } from '@/src/components/common/user-avatar';
 import { UserProfileModal } from '@/src/components/chat/user-profile-modal';
+import { GroupDetailsModal } from '@/src/components/chat/group-details-modal';
 import { useCurrentUser } from '@/src/hooks/use-auth';
+import { useDeleteConversation, useRemoveParticipant } from '@/src/hooks/use-chat';
 import { ChevronLeft, Search, X, ChevronUp, ChevronDown, MoreVertical, Shield, ShieldOff, UserPlus, Users, Crown, LogOut, Trash2, User, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -15,7 +17,6 @@ import { toast } from 'sonner';
 
 interface ChatHeaderProps {
   conversation: Conversation;
-  onToggleInfo?: () => void;
   onBack?: () => void;
 }
 
@@ -43,7 +44,7 @@ function getParticipantCount(conversation: Conversation): number {
   return (conversation.participants as PopulatedUser[]).length;
 }
 
-export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderProps) {
+export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
   const { user } = useCurrentUser();
   const isGroup = conversation.type === 'group';
   const name = getConversationName(conversation, user?._id);
@@ -64,9 +65,14 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
   } = useChatStore();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [blockedOverride, setBlockedOverride] = useState<boolean | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const deleteConversationMut = useDeleteConversation();
+  const removeParticipantMut = useRemoveParticipant();
 
   const blockedFromUser = useMemo(() => {
     if (!otherParticipant || !user) return false;
@@ -150,11 +156,11 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
 
   const handleClickHeader = useCallback(() => {
     if (isGroup) {
-      onToggleInfo?.();
+      setShowGroupModal(true);
     } else {
       setShowProfileModal(true);
     }
-  }, [isGroup, onToggleInfo]);
+  }, [isGroup]);
 
   if (isSearchActive) {
     return (
@@ -322,7 +328,7 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
                         <button
                           onClick={() => {
                             setShowDropdown(false);
-                            onToggleInfo?.();
+                            setShowGroupModal(true);
                           }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-base-200 transition-colors text-left"
                         >
@@ -331,7 +337,10 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
                         </button>
                         {conversation.owner === user?._id && (
                           <button
-                            onClick={() => setShowDropdown(false)}
+                            onClick={() => {
+                              setShowDropdown(false);
+                              setShowGroupModal(true);
+                            }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-base-200 transition-colors text-left"
                           >
                             <Crown className="w-4 h-4 text-base-content/40" />
@@ -340,7 +349,10 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
                         )}
                         {conversation.admins?.includes(user?._id || '') || conversation.owner === user?._id ? (
                           <button
-                            onClick={() => setShowDropdown(false)}
+                            onClick={() => {
+                              setShowDropdown(false);
+                              setShowGroupModal(true);
+                            }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-base-200 transition-colors text-left"
                           >
                             <UserPlus className="w-4 h-4 text-base-content/40" />
@@ -349,7 +361,10 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
                         ) : null}
                         {conversation.owner === user?._id && (
                           <button
-                            onClick={() => setShowDropdown(false)}
+                            onClick={() => {
+                              setShowDropdown(false);
+                              setShowDeleteConfirm(true);
+                            }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-base-200 transition-colors text-left text-error"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -357,7 +372,10 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
                           </button>
                         )}
                         <button
-                          onClick={() => setShowDropdown(false)}
+                          onClick={() => {
+                            setShowDropdown(false);
+                            setShowLeaveConfirm(true);
+                          }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-base-200 transition-colors text-left text-warning"
                         >
                           <LogOut className="w-4 h-4" />
@@ -380,6 +398,100 @@ export function ChatHeader({ conversation, onToggleInfo, onBack }: ChatHeaderPro
         isOnline={isOnline}
         lastSeen={otherParticipant?.lastSeen}
       />
+
+      <GroupDetailsModal
+        isOpen={showGroupModal}
+        onClose={() => setShowGroupModal(false)}
+        conversation={conversation}
+      />
+
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm mx-4 bg-base-100 rounded-2xl shadow-2xl border border-base-300 p-6"
+            >
+              <h3 className="font-semibold text-lg mb-2">Delete Group?</h3>
+              <p className="text-sm text-base-content/60 mb-4">
+                This will permanently delete this group and all messages. This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                <button
+                  onClick={() => {
+                    deleteConversationMut.mutate(conversation._id, {
+                      onSuccess: () => {
+                        setShowDeleteConfirm(false);
+                        toast.success('Group deleted');
+                      },
+                    });
+                  }}
+                  className="btn btn-error btn-sm"
+                >
+                  {deleteConversationMut.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLeaveConfirm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowLeaveConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm mx-4 bg-base-100 rounded-2xl shadow-2xl border border-base-300 p-6"
+            >
+              <h3 className="font-semibold text-lg mb-2">Leave Group?</h3>
+              <p className="text-sm text-base-content/60 mb-4">
+                You will no longer have access to this group conversation.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowLeaveConfirm(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                <button
+                  onClick={() => {
+                    if (!user) return;
+                    removeParticipantMut.mutate(
+                      { conversationId: conversation._id, userId: user._id },
+                      {
+                        onSuccess: () => {
+                          setShowLeaveConfirm(false);
+                          toast.success('Left group');
+                        },
+                      },
+                    );
+                  }}
+                  className="btn btn-warning btn-sm"
+                >
+                  {removeParticipantMut.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Leave
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

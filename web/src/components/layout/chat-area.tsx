@@ -133,6 +133,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
     <div className="flex-1 flex flex-col h-full min-w-0">
       <ChatHeader conversation={conversation} onBack={onBack} />
 
+
       <div
         ref={containerRef}
         onScroll={handleScroll}

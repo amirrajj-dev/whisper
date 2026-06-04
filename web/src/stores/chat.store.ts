@@ -15,6 +15,7 @@ interface ChatState {
   searchQuery: string;
   searchActiveMatchIndex: number;
   searchMatchIds: string[];
+  unreadCounts: Record<string, number>;
   setActiveConversation: (id: string | null) => void;
   setConversationsSearch: (query: string) => void;
   setReplyingTo: (reply: { messageId: string; content: string; senderName: string } | null) => void;
@@ -27,6 +28,9 @@ interface ChatState {
   setSearchActiveMatchIndex: (index: number) => void;
   setSearchMatchIds: (ids: string[]) => void;
   clearSearch: () => void;
+  incrementUnread: (conversationId: string) => void;
+  resetUnread: (conversationId: string) => void;
+  setUnreadCounts: (counts: Record<string, number>) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -39,7 +43,11 @@ export const useChatStore = create<ChatState>((set) => ({
   searchQuery: '',
   searchActiveMatchIndex: -1,
   searchMatchIds: [],
-  setActiveConversation: (id) => set({ activeConversationId: id, editingMessage: null, replyingTo: null }),
+  unreadCounts: {},
+  setActiveConversation: (id) => set((state) => {
+    const newCounts = id ? { ...state.unreadCounts, [id]: 0 } : state.unreadCounts;
+    return { activeConversationId: id, editingMessage: null, replyingTo: null, unreadCounts: newCounts };
+  }),
   setConversationsSearch: (query) => set({ conversationsSearch: query }),
   setReplyingTo: (reply) => set({ replyingTo: reply, editingMessage: null }),
   setEditingMessage: (edit) => set({ editingMessage: edit, replyingTo: null }),
@@ -92,4 +100,19 @@ export const useChatStore = create<ChatState>((set) => ({
       searchActiveMatchIndex: -1,
       searchMatchIds: [],
     }),
+  incrementUnread: (conversationId) =>
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [conversationId]: (state.unreadCounts[conversationId] || 0) + 1,
+      },
+    })),
+  resetUnread: (conversationId) =>
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [conversationId]: 0,
+      },
+    })),
+  setUnreadCounts: (counts) => set({ unreadCounts: counts }),
 }));

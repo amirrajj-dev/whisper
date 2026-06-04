@@ -49,7 +49,7 @@ function getTypingUsername(
 
 export function useSocket() {
   const { isAuthenticated, user, accessToken } = useAuthStore();
-  const { addTypingUser, removeTypingUser } = useChatStore();
+  const { addTypingUser, removeTypingUser, incrementUnread: incrementConvUnread } = useChatStore();
   const { incrementUnread } = useNotificationStore();
   const queryClient = useQueryClient();
   const cleanupRef = useRef<(() => void)[]>([]);
@@ -137,20 +137,40 @@ export function useSocket() {
         }>
       >(["conversations"], (old) => {
         if (!old?.pages?.length) return old;
-        const pages = old.pages.map((page) => ({
-          ...page,
-          conversations: page.conversations.map((c) =>
-            c._id === data.conversationId
-              ? {
-                  ...c,
-                  lastMessage: data.content,
-                  lastMessageAt: new Date().toISOString(),
-                }
-              : c,
-          ),
-        }));
+        const newLastMessageAt = data.message && typeof data.message === "object" && "createdAt" in data.message
+          ? (data.message as { createdAt: string }).createdAt
+          : new Date().toISOString();
+        const newContent = data.content;
+
+        let updatedConv: Conversation | null = null;
+        const pages = old.pages.map((page) => {
+          const filtered = page.conversations.filter((c) => {
+            if (c._id === data.conversationId) {
+              updatedConv = {
+                ...c,
+                lastMessage: newContent,
+                lastMessageAt: newLastMessageAt,
+              };
+              return false;
+            }
+            return true;
+          });
+          return { ...page, conversations: filtered };
+        });
+
+        if (!updatedConv) return old;
+
+        pages[0] = {
+          ...pages[0],
+          conversations: [updatedConv, ...pages[0].conversations],
+        };
         return { ...old, pages };
       });
+
+      const currentActiveId = useChatStore.getState().activeConversationId;
+      if (data.senderId !== user?._id && data.conversationId !== currentActiveId) {
+        incrementConvUnread(data.conversationId);
+      }
     });
 
     registerEvent("message:edited", (data: MessageEditedPayload) => {
@@ -397,6 +417,30 @@ export function useSocket() {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     });
 
+    registerEvent("connected", (data) => {
+      const currentUserId = data.userId;
+      queryClient.setQueryData<
+        InfiniteData<{ conversations: Conversation[] }>
+      >(["conversations"], (old) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            conversations: page.conversations.map((c) => {
+              const participants = (c as unknown as { participants: Array<{ _id: string; lastSeen?: string | null }> }).participants || [];
+              return {
+                ...c,
+                participants: participants.map((p) =>
+                  p._id === currentUserId ? { ...p, lastSeen: null } : p,
+                ),
+              } as Conversation;
+            }),
+          })),
+        };
+      });
+    });
+
     registerEvent("notification:new", (data) => {
       const notification = data as unknown as Notification;
       queryClient.setQueryData<
@@ -432,6 +476,7 @@ export function useSocket() {
     addTypingUser,
     removeTypingUser,
     incrementUnread,
+    incrementConvUnread,
     queryClient,
     user,
     registerEvent,

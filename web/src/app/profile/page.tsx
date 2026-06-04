@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useCurrentUser } from '@/src/hooks/use-auth';
+import { useAuthStore } from '@/src/stores/auth.store';
 import { userApi } from '@/src/services/user.api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserAvatar } from '@/src/components/common/user-avatar';
@@ -47,8 +48,9 @@ export default function ProfilePage() {
         { username: data.username, email: data.email, bio: data.bio || undefined },
         avatarFile || undefined,
       ),
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ['me'] });
+      useAuthStore.getState().setUser(updatedUser);
       toast.success('Profile updated');
       setAvatarFile(null);
       setAvatarPreview(null);

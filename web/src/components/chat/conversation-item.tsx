@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { UserAvatar } from '@/src/components/common/user-avatar';
 import type { Conversation, PopulatedUser } from '@/src/types/entities';
 import { useCurrentUser } from '@/src/hooks/use-auth';
+import { useChatStore } from '@/src/stores/chat.store';
 import { formatDistanceToNow } from 'date-fns';
 import { Hash } from 'lucide-react';
 
@@ -11,7 +12,6 @@ interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
   onClick: () => void;
-  unreadCount?: number;
 }
 
 function getConversationName(conversation: Conversation, currentUserId?: string): string {
@@ -54,9 +54,9 @@ export function ConversationItem({
   conversation,
   isActive,
   onClick,
-  unreadCount = 0,
 }: ConversationItemProps) {
   const { user } = useCurrentUser();
+  const unreadCount = useChatStore((s) => s.unreadCounts[conversation._id] || 0);
   const isGroup = conversation.type === 'group';
   const name = getConversationName(conversation, user?._id);
   const avatar = getConversationAvatar(conversation, user?._id);

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import Link from 'next/link'
 import { ArrowRight, MessageCircle, ChevronDown } from 'lucide-react'
 
 const blobAnimation = (i: number) => ({
@@ -101,10 +102,10 @@ export function Hero() {
             transition={{ delay: 0.6, duration: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <button className="btn btn-primary btn-lg gap-2">
+            <Link href="/app" className="btn btn-primary btn-lg gap-2">
               Start Chatting
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </Link>
             <button
               onClick={scrollToFeatures}
               className="btn btn-outline btn-lg gap-2"
