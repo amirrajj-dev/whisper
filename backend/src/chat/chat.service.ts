@@ -177,6 +177,14 @@ export class ChatService {
         this.messageModel
           .find({ conversationId })
           .populate('senderId', 'username email avatarUrl')
+          .populate('replyTo', 'content type senderId')
+          .populate({
+            path: 'replyTo',
+            populate: {
+              path: 'senderId',
+              select: 'username',
+            },
+          })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(safeLimit)

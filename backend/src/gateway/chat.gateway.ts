@@ -10,6 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Logger } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
 import { MessageDocument } from 'src/common/schemas/message.schema';
 import { UserDocument } from 'src/common/schemas/user.schema';
@@ -24,6 +25,8 @@ import { ConversationDocument } from 'src/common/schemas/conversation.schema';
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(ChatGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -47,6 +50,7 @@ export class ChatGateway
     try {
       const token = this.extractToken(client);
       if (!token) {
+        this.logger.warn(`Connection rejected: no token from ${client.id}`);
         client.disconnect();
         return;
       }
@@ -64,6 +68,9 @@ export class ChatGateway
       client.data.conversationIds = [];
 
       this.gatewayService.registerSocket(payload.sub, client.id);
+      this.logger.log(
+        `Socket connected: user=${payload.sub} socket=${client.id}`,
+      );
 
       const conversations = await this.conversationModel
         .find({ participants: payload.sub })
@@ -78,6 +85,9 @@ export class ChatGateway
       for (const convId of conversationIds) {
         await client.join(`conversation:${convId}`);
       }
+      this.logger.log(
+        `User ${payload.sub} joined ${conversationIds.length} rooms`,
+      );
 
       const onlinePayload = {
         userId: payload.sub,
@@ -89,7 +99,10 @@ export class ChatGateway
       }
 
       client.emit('connected', { userId: payload.sub });
-    } catch {
+    } catch (err) {
+      this.logger.warn(
+        `Connection rejected for ${client.id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
       client.disconnect();
     }
   }
@@ -122,6 +135,10 @@ export class ChatGateway
     payload: { conversationId: string },
   ): void {
     if (!payload?.conversationId) return;
+    const userId = client.data?.user?.id;
+    this.logger.log(
+      `join:conversation user=${userId} conv=${payload.conversationId}`,
+    );
     client.join(`conversation:${payload.conversationId}`);
   }
 
@@ -131,6 +148,10 @@ export class ChatGateway
     payload: { conversationId: string },
   ): void {
     if (!payload?.conversationId) return;
+    const userId = client.data?.user?.id;
+    this.logger.log(
+      `leave:conversation user=${userId} conv=${payload.conversationId}`,
+    );
     client.leave(`conversation:${payload.conversationId}`);
   }
 
@@ -142,8 +163,10 @@ export class ChatGateway
     const now = Date.now();
     const lastTyping = this.typingLimiter.get(userId) || 0;
 
-    // Limit to 1 typing event per 2 seconds
     if (now - lastTyping < 2000) return;
+    this.logger.log(
+      `typing:start user=${userId} conv=${payload.conversationId}`,
+    );
 
     this.typingLimiter.set(userId, now);
 

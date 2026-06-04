@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Server } from 'socket.io';
-import { ChatEvents } from 'src/common/constants/events.constants';
+import { ChatEvents, NotificationEvents } from 'src/common/constants/events.constants';
 
 @Injectable()
 export class GatewayService implements OnModuleInit {
@@ -56,6 +56,10 @@ export class GatewayService implements OnModuleInit {
     this.eventEmitter.on(
       ChatEvents.OWNERSHIP_TRANSFERRED,
       this.handleOwnershipTransferred.bind(this),
+    );
+    this.eventEmitter.on(
+      NotificationEvents.NOTIFICATION_CREATED,
+      this.handleNotificationCreated.bind(this),
     );
   }
 
@@ -193,5 +197,9 @@ export class GatewayService implements OnModuleInit {
       'conversation:ownership_transferred',
       data,
     );
+  }
+
+  private handleNotificationCreated(data: any): void {
+    this.emitToUser(data.userId, 'notification:new', data.notification);
   }
 }

@@ -1,29 +1,40 @@
-'use client'
+"use client";
 
-import { useThemeStore, type Theme, themeNames } from '@/src/store/theme-store'
-import { Palette, Check } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useRef, useEffect } from 'react'
+import {
+  useThemeStore,
+  type Theme,
+  themeNames,
+} from "@/src/stores/theme-store";
+import { Palette, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
 
 export function ThemePicker() {
-  const { theme, setTheme } = useThemeStore()
-  const [isOpen, setIsOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const { theme, setTheme } = useThemeStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
-  const themes: Theme[] = ['light', 'dark', 'coffee', 'night', 'forest', 'dracula']
+  const themes: Theme[] = [
+    "light",
+    "dark",
+    "coffee",
+    "night",
+    "forest",
+    "dracula",
+  ];
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative z-100">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="btn btn-ghost btn-circle"
@@ -44,11 +55,11 @@ export function ThemePicker() {
               <button
                 key={t}
                 onClick={() => {
-                  setTheme(t)
-                  setIsOpen(false)
+                  setTheme(t);
+                  setIsOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-base-300 ${
-                  theme === t ? 'text-primary font-medium' : 'text-base-content'
+                  theme === t ? "text-primary font-medium" : "text-base-content"
                 }`}
               >
                 <span className="capitalize">{themeNames[t]}</span>
@@ -59,5 +70,5 @@ export function ThemePicker() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

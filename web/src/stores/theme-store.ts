@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type Theme = 'light' | 'dark' | 'coffee' | 'night' | 'forest' | 'dracula'
 
@@ -16,7 +17,15 @@ interface ThemeState {
   setTheme: (theme: Theme) => void
 }
 
-export const useThemeStore = create<ThemeState>((set) => ({
-  theme: 'dark',
-  setTheme: (theme: Theme) => set({ theme }),
-}))
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      setTheme: (theme: Theme) => set({ theme }),
+    }),
+    {
+      name: 'whisper-theme',
+      partialize: (state) => ({ theme: state.theme }),
+    },
+  ),
+)
