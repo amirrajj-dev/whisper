@@ -147,6 +147,18 @@ export class NotificationService {
     }
   }
 
+  async deleteAll(userId: string) {
+    try {
+      await this.notificationModel.deleteMany({ userId });
+      return { message: 'All notifications deleted' };
+    } catch (error) {
+      this.logger.error(
+        `Error deleting all notifications: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  }
+
   async delete(id: string, userId: string) {
     try {
       const result = await this.notificationModel.findOneAndDelete({

@@ -65,6 +65,13 @@ export class NotificationController {
     return this.notificationService.markAllAsRead(user._id);
   }
 
+  @Delete('all')
+  @ApiOperation({ summary: 'Delete all notifications' })
+  @ApiResponse({ status: 200, description: 'All notifications deleted' })
+  async deleteAllNotifications(@CurrentUser() user: Omit<User, 'password'>) {
+    return this.notificationService.deleteAll(user._id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a notification' })
   @ApiResponse({ status: 200, description: 'Notification deleted' })
