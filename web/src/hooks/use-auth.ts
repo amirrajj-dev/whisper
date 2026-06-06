@@ -24,14 +24,13 @@ function mapAuthUser(user: AuthResponse["user"]): Omit<User, "password"> {
 }
 
 export function useLogin() {
-  const { setUser, setAccessToken } = useAuthStore();
+  const { setUser } = useAuthStore();
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
     mutationFn: (data: LoginDto) => authApi.login(data),
     onSuccess: (response) => {
-      setAccessToken(response.access_token);
       setUser(mapAuthUser(response.user));
       queryClient.invalidateQueries({ queryKey: ["me"] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -45,14 +44,13 @@ export function useLogin() {
 }
 
 export function useRegister() {
-  const { setUser, setAccessToken } = useAuthStore();
+  const { setUser } = useAuthStore();
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
     mutationFn: (data: SignupDto) => authApi.register(data),
     onSuccess: (response) => {
-      setAccessToken(response.access_token);
       setUser(mapAuthUser(response.user));
       queryClient.invalidateQueries({ queryKey: ["me"] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -73,14 +71,14 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
-      socketManager.disconnect();
+      socketManager.fullCleanup();
       storeLogout();
       queryClient.clear();
       router.push("/");
       toast.success("Logged out");
     },
     onError: () => {
-      socketManager.disconnect();
+      socketManager.fullCleanup();
       storeLogout();
       queryClient.clear();
       router.push("/");

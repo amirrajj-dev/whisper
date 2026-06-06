@@ -6,6 +6,7 @@ import { UserAvatar } from '@/src/components/common/user-avatar';
 import { UserProfileModal } from '@/src/components/chat/user-profile-modal';
 import { useCurrentUser } from '@/src/hooks/use-auth';
 import { useAddParticipants, useRemoveParticipant, usePromoteToAdmin, useDemoteFromAdmin, useTransferOwnership, useDeleteConversation } from '@/src/hooks/use-chat';
+import { usePresenceStore } from '@/src/stores/presence.store';
 import { userApi } from '@/src/services/user.api';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -208,9 +209,10 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     return getMembersFromConversation(conversation);
   }, [conversation]);
 
+  const onlineUsers = usePresenceStore((s) => s.onlineUsers);
   const onlineCount = useMemo(() => {
-    return members.filter(m => m.lastSeen === null).length;
-  }, [members]);
+    return members.filter(m => onlineUsers.has(m._id)).length;
+  }, [members, onlineUsers]);
 
   const handlePromote = useCallback(async (userId: string) => {
     if (!conversation) return;
@@ -398,7 +400,7 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
                   {members.map((member) => {
                     const isSelf = member._id === currentUser._id;
                     const role = member.role;
-                    const isOnline = member.lastSeen === null;
+                    const isOnline = onlineUsers.has(member._id);
 
                     let roleBadge: { label: string; className: string; icon: React.ReactNode } | null = null;
                     if (role === 'owner') {
@@ -683,7 +685,7 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
         isOpen={!!showProfileFor}
         onClose={() => setShowProfileFor(null)}
         user={showProfileFor}
-        isOnline={showProfileFor?.lastSeen === null}
+        isOnline={showProfileFor ? onlineUsers.has(showProfileFor._id) : false}
         lastSeen={showProfileFor?.lastSeen}
       />
     </>

@@ -106,7 +106,7 @@ export class AuthController {
       httpOnly: true,
       secure: nodeEnv === 'production',
       sameSite: 'strict',
-      maxAge: ACCESS_TOKEN_EXPIRY, // 15 minutes
+      maxAge: ACCESS_TOKEN_EXPIRY,
     });
     res.cookie(REFRESH_TOKEN_COOKIE, result.refresh_token, {
       httpOnly: true,

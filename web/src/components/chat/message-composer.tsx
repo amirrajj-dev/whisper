@@ -30,6 +30,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingThrottleRef = useRef<number>(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sendMutation = useSendMessage();
   const editMutation = useEditMessage();
@@ -91,11 +92,15 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
 
   const handleTyping = useCallback(() => {
     if (!socketManager.isConnected()) return;
-    socketManager.startTyping(conversationId);
+    const now = Date.now();
+    if (now - typingThrottleRef.current > 2000) {
+      socketManager.startTyping(conversationId);
+      typingThrottleRef.current = now;
+    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       socketManager.stopTyping(conversationId);
-    }, 2000);
+    }, 3000);
   }, [conversationId]);
 
   useEffect(() => {

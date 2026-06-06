@@ -218,6 +218,18 @@ export class ChatGateway
 
   private extractToken(client: Socket): string | null {
     const auth = client.handshake.headers.authorization;
-    return auth?.startsWith('Bearer ') ? auth.slice(7) : auth || null;
+    if (auth) {
+      return auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+    }
+    const cookieHeader = client.handshake.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(
+        /(?:^|;\s*)whisper_access_token=([^;]*)/,
+      );
+      if (match) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    return null;
   }
 }

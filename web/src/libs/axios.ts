@@ -1,5 +1,4 @@
 import axios, { AxiosError } from 'axios';
-import { useAuthStore } from '@/src/stores/auth.store';
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -47,17 +46,14 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(
+        await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
           {},
           { withCredentials: true },
         );
-        const data = response.data?.data || response.data;
-        const accessToken = data?.access_token;
-        if (accessToken) {
-          useAuthStore.getState().setAccessToken(accessToken);
-        }
+
         processQueue(null);
+
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);

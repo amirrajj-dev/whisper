@@ -5,6 +5,7 @@ import { socketManager } from "@/src/socket/socket.manager";
 import { useAuthStore } from "@/src/stores/auth.store";
 import { useChatStore } from "@/src/stores/chat.store";
 import { useNotificationStore } from "@/src/stores/notification.store";
+import { usePresenceStore } from "@/src/stores/presence.store";
 import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/src/services/auth.api";
 import type {
@@ -12,8 +13,6 @@ import type {
   MessageNewPayload,
   MessageEditedPayload,
   MessageDeletedPayload,
-  UserOnlinePayload,
-  UserOfflinePayload,
   MessageReadPayload,
   ConversationUpdatedPayload,
   ConversationDeletedPayload,
@@ -48,13 +47,60 @@ function getTypingUsername(
   return "";
 }
 
+function getOtherParticipantIds(
+  conversationsData:
+    | InfiniteData<{ conversations: Conversation[] }>
+    | undefined,
+  currentUserId: string,
+): string[] {
+  if (!conversationsData?.pages) return [];
+  const ids = new Set<string>();
+  for (const page of conversationsData.pages) {
+    for (const c of page.conversations) {
+      const participants = (c as unknown as { participants: Array<{ _id: string }> }).participants || [];
+      for (const p of participants) {
+        if (p._id !== currentUserId) {
+          ids.add(p._id);
+        }
+      }
+    }
+  }
+  return Array.from(ids);
+}
+
+function moveConversationToTop<T extends { conversations: Conversation[] }>(
+  oldData: InfiniteData<T>,
+  conversationId: string,
+  updater: (c: Conversation) => Conversation,
+): InfiniteData<T> {
+  let moved: Conversation | null = null;
+  const pages = oldData.pages.map((page) => {
+    const remaining = page.conversations.filter((c) => {
+      if (c._id === conversationId) {
+        moved = updater(c);
+        return false;
+      }
+      return true;
+    });
+    return { ...page, conversations: remaining } as T;
+  }) as InfiniteData<T>['pages'];
+
+  if (!moved) return oldData;
+
+  pages[0] = {
+    ...pages[0],
+    conversations: [moved, ...pages[0].conversations],
+  } as T;
+  return { ...oldData, pages };
+}
+
 export function useSocket() {
-  const { isAuthenticated, user, accessToken } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { addTypingUser, removeTypingUser, incrementUnread: incrementConvUnread } = useChatStore();
   const { incrementUnread } = useNotificationStore();
+  const { setOnline, setOffline, fetchAndSetOnline } = usePresenceStore();
   const queryClient = useQueryClient();
   const cleanupRef = useRef<(() => void)[]>([]);
-  const isSetupRef = useRef(false);
 
   const registerEvent = useCallback(
     <E extends keyof ServerToClientEvents>(
@@ -70,26 +116,19 @@ export function useSocket() {
   useEffect(() => {
     if (!isAuthenticated || !user) {
       socketManager.disconnect();
-      isSetupRef.current = false;
       return;
     }
 
-    if (isSetupRef.current) return;
-
-    if (!accessToken) return;
-
     try {
-      socketManager.connect(accessToken);
-      isSetupRef.current = true;
+      socketManager.connect();
     } catch {
       return;
     }
 
     const unsubAuthError = socketManager.onAuthError(async () => {
       try {
-        const refreshRes = await authApi.refresh();
-        const store = useAuthStore.getState();
-        store.setAccessToken(refreshRes.access_token);
+        await authApi.refresh();
+        socketManager.reconnect();
       } catch {
         window.dispatchEvent(new CustomEvent("auth:logout"));
       }
@@ -97,31 +136,48 @@ export function useSocket() {
     cleanupRef.current.push(unsubAuthError);
 
     registerEvent("message:new", (data: MessageNewPayload) => {
-      const queryKey = ["messages", data.conversationId];
+      const messagePayload = data.message as Record<string, unknown> | undefined;
 
       queryClient.setQueryData<
         InfiniteData<{ messages: Message[]; page: number; totalPages: number }>
-      >(queryKey, (old) => {
+      >(["messages", data.conversationId], (old) => {
         if (!old?.pages?.length) return old;
         const exists = old.pages.some((page) =>
           page.messages.some((m) => m._id === data.messageId),
         );
         if (exists) return old;
+
         const newMessage: Message = {
           _id: data.messageId,
           conversationId: data.conversationId,
           senderId: data.senderId,
           type: data.type,
           content: data.content,
-          edited: false,
+          edited: messagePayload?.edited === true,
           deleted: false,
           deliveredTo: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        } as Message;
-        if (data.message && typeof data.message === "object") {
-          Object.assign(newMessage, data.message);
+          createdAt: (messagePayload?.createdAt as string) || new Date().toISOString(),
+          updatedAt: (messagePayload?.updatedAt as string) || new Date().toISOString(),
+        };
+
+        if (messagePayload && typeof messagePayload === "object") {
+          if (typeof messagePayload.senderId === "object" && messagePayload.senderId !== null) {
+            newMessage.senderId = messagePayload.senderId as PopulatedUser;
+          }
+          if (messagePayload.replyTo) {
+            newMessage.replyTo = messagePayload.replyTo as Message["replyTo"];
+          }
+          if (messagePayload.type && messagePayload.type !== "text") {
+            newMessage.type = messagePayload.type as Message["type"];
+          }
+          if (messagePayload.publicId) {
+            newMessage.publicId = messagePayload.publicId as string;
+          }
+          if (messagePayload.deliveredTo) {
+            newMessage.deliveredTo = messagePayload.deliveredTo as string[];
+          }
         }
+
         const pages = [...old.pages];
         pages[0] = {
           ...pages[0],
@@ -138,34 +194,22 @@ export function useSocket() {
         }>
       >(["conversations"], (old) => {
         if (!old?.pages?.length) return old;
-        const newLastMessageAt = data.message && typeof data.message === "object" && "createdAt" in data.message
-          ? (data.message as { createdAt: string }).createdAt
+
+        const newLastMessageAt = messagePayload && typeof messagePayload === "object" && "createdAt" in messagePayload
+          ? (messagePayload.createdAt as string)
           : new Date().toISOString();
-        const newContent = data.content;
+        const preview =
+          data.type === "text"
+            ? data.content.substring(0, 100)
+            : `[${data.type}]`;
 
-        let updatedConv: Conversation | null = null;
-        const pages = old.pages.map((page) => {
-          const filtered = page.conversations.filter((c) => {
-            if (c._id === data.conversationId) {
-              updatedConv = {
-                ...c,
-                lastMessage: newContent,
-                lastMessageAt: newLastMessageAt,
-              };
-              return false;
-            }
-            return true;
-          });
-          return { ...page, conversations: filtered };
-        });
+        const result = moveConversationToTop(old, data.conversationId, (c) => ({
+          ...c,
+          lastMessage: preview,
+          lastMessageAt: newLastMessageAt,
+        }));
 
-        if (!updatedConv) return old;
-
-        pages[0] = {
-          ...pages[0],
-          conversations: [updatedConv, ...pages[0].conversations],
-        };
-        return { ...old, pages };
+        return result;
       });
 
       const currentActiveId = useChatStore.getState().activeConversationId;
@@ -209,12 +253,7 @@ export function useSocket() {
               ...page,
               messages: page.messages.map((msg) =>
                 msg._id === data.messageId
-                  ? {
-                      ...msg,
-                      deleted: true,
-                      content: "",
-                      type: "text" as const,
-                    }
+                  ? { ...msg, deleted: true, content: "", type: "text" as const }
                   : msg,
               ),
             })),
@@ -269,7 +308,9 @@ export function useSocket() {
       removeTypingUser(data.conversationId, data.userId);
     });
 
-    registerEvent("user:online", (data: UserOnlinePayload) => {
+    registerEvent("user:online", (data) => {
+      setOnline(data.userId);
+
       queryClient.setQueryData<InfiniteData<{ conversations: Conversation[] }>>(
         ["conversations"],
         (old) => {
@@ -306,7 +347,9 @@ export function useSocket() {
       }
     });
 
-    registerEvent("user:offline", (data: UserOfflinePayload) => {
+    registerEvent("user:offline", (data) => {
+      setOffline(data.userId);
+
       queryClient.setQueryData<InfiniteData<{ conversations: Conversation[] }>>(
         ["conversations"],
         (old) => {
@@ -418,28 +461,17 @@ export function useSocket() {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     });
 
-    registerEvent("connected", (data) => {
-      const currentUserId = data.userId;
-      queryClient.setQueryData<
+    registerEvent("connected", () => {
+      const conversationsData = queryClient.getQueryData<
         InfiniteData<{ conversations: Conversation[] }>
-      >(["conversations"], (old) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            conversations: page.conversations.map((c) => {
-              const participants = (c as unknown as { participants: Array<{ _id: string; lastSeen?: string | null }> }).participants || [];
-              return {
-                ...c,
-                participants: participants.map((p) =>
-                  p._id === currentUserId ? { ...p, lastSeen: null } : p,
-                ),
-              } as Conversation;
-            }),
-          })),
-        };
-      });
+      >(["conversations"]);
+
+      if (user) {
+        const otherIds = getOtherParticipantIds(conversationsData, user._id);
+        if (otherIds.length > 0) {
+          fetchAndSetOnline(otherIds);
+        }
+      }
     });
 
     registerEvent("notification:new", (data) => {
@@ -476,12 +508,10 @@ export function useSocket() {
     return () => {
       cleanupRef.current.forEach((fn) => fn());
       cleanupRef.current = [];
-      isSetupRef.current = false;
     };
   }, [
     isAuthenticated,
     user?._id,
-    accessToken,
     addTypingUser,
     removeTypingUser,
     incrementUnread,
@@ -489,6 +519,9 @@ export function useSocket() {
     queryClient,
     user,
     registerEvent,
+    setOnline,
+    setOffline,
+    fetchAndSetOnline,
   ]);
 
   return socketManager;

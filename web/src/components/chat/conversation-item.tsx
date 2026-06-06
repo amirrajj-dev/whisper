@@ -5,6 +5,7 @@ import { UserAvatar } from '@/src/components/common/user-avatar';
 import type { Conversation, PopulatedUser } from '@/src/types/entities';
 import { useCurrentUser } from '@/src/hooks/use-auth';
 import { useChatStore } from '@/src/stores/chat.store';
+import { usePresenceStore } from '@/src/stores/presence.store';
 import { formatDistanceToNow } from 'date-fns';
 import { Hash } from 'lucide-react';
 
@@ -57,15 +58,16 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const { user } = useCurrentUser();
   const unreadCount = useChatStore((s) => s.unreadCounts[conversation._id] || 0);
+  const isOnline = usePresenceStore((s) => {
+    const other = getOtherParticipant(
+      conversation.participants as PopulatedUser[],
+      user?._id,
+    );
+    return other ? s.onlineUsers.has(other._id) : false;
+  });
   const isGroup = conversation.type === 'group';
   const name = getConversationName(conversation, user?._id);
   const avatar = getConversationAvatar(conversation, user?._id);
-  const otherParticipant = getOtherParticipant(
-    conversation.participants as PopulatedUser[],
-    user?._id,
-  );
-  const isOnline = !isGroup && otherParticipant?.lastSeen === null;
-
   return (
     <motion.button
       whileTap={{ scale: 0.98 }}
@@ -99,13 +101,15 @@ export function ConversationItem({
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          {conversation.lastMessage ? (
-            <span className="text-xs text-base-content/60 truncate">
-              {conversation.lastMessage}
-            </span>
-          ) : (
-            <span className="text-xs text-base-content/30 italic">No messages yet</span>
-          )}
+          <span className="text-xs text-base-content/60 truncate">
+            {isOnline ? (
+              <span className="text-success font-medium">Online</span>
+            ) : conversation.lastMessage ? (
+              conversation.lastMessage
+            ) : (
+              <span className="text-base-content/30 italic">No messages yet</span>
+            )}
+          </span>
           {unreadCount > 0 && (
             <span className="badge badge-primary badge-xs shrink-0">{unreadCount}</span>
           )}

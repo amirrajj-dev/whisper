@@ -6,18 +6,18 @@ import type {
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
+const MAX_RECONNECT_ATTEMPTS = 20;
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 5000;
+
 class SocketManager {
   private socket: TypedSocket | null = null;
   private joinedRooms: Set<string> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 20;
   private onReconnectCallbacks: Array<() => void> = [];
   private onAuthErrorCallbacks: Array<() => void> = [];
-  private currentToken: string | null = null;
 
-  connect(token: string): TypedSocket {
-    this.currentToken = token;
-
+  connect(): TypedSocket {
     if (this.socket?.connected) {
       return this.socket;
     }
@@ -28,14 +28,12 @@ class SocketManager {
     const url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
 
     this.socket = io(url, {
-      extraHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
+      withCredentials: true,
       transports: ["polling", "websocket"],
       reconnection: true,
-      reconnectionAttempts: this.maxReconnectAttempts,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      reconnectionDelay: INITIAL_RECONNECT_DELAY,
+      reconnectionDelayMax: MAX_RECONNECT_DELAY,
     }) as unknown as TypedSocket;
 
     const s = this.socket as unknown as Socket;
@@ -46,21 +44,20 @@ class SocketManager {
 
     s.on("connect_error", (err: Error) => {
       this.reconnectAttempts++;
+      const message = err.message?.toLowerCase() || "";
       const isAuthError =
-        err.message?.toLowerCase().includes("token") ||
-        err.message?.toLowerCase().includes("unauthorized") ||
-        err.message?.toLowerCase().includes("401");
+        message.includes("token") ||
+        message.includes("unauthorized") ||
+        message.includes("401");
       if (isAuthError) {
         for (const cb of this.onAuthErrorCallbacks) {
           cb();
         }
       }
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         this.disconnect();
       }
     });
-
-    s.on("disconnect", () => {});
 
     s.on("connected", () => {
       this.rejoinRooms();
@@ -69,11 +66,11 @@ class SocketManager {
     return this.socket;
   }
 
-  updateToken(token: string): void {
-    this.currentToken = token;
-    if (this.socket?.connected) {
-      this.disconnect();
-    }
+  reconnect(): void {
+    const rooms = new Set(this.joinedRooms);
+    this.disconnect();
+    this.joinedRooms = rooms;
+    this.connect();
   }
 
   onReconnect(cb: () => void): () => void {
@@ -95,9 +92,10 @@ class SocketManager {
   }
 
   private rejoinRooms(): void {
-    const s = this.socket as unknown as Socket;
     for (const roomId of this.joinedRooms) {
-      s.emit("join:conversation", { conversationId: roomId });
+      (this.socket as unknown as Socket).emit("join:conversation", {
+        conversationId: roomId,
+      });
     }
     for (const cb of this.onReconnectCallbacks) {
       cb();
@@ -105,7 +103,6 @@ class SocketManager {
   }
 
   disconnect(): void {
-    this.joinedRooms.clear();
     this.reconnectAttempts = 0;
     if (this.socket) {
       this.socket.removeAllListeners();
@@ -116,16 +113,17 @@ class SocketManager {
     this.onAuthErrorCallbacks = [];
   }
 
+  fullCleanup(): void {
+    this.joinedRooms.clear();
+    this.disconnect();
+  }
+
   getSocket(): TypedSocket | null {
     return this.socket;
   }
 
   isConnected(): boolean {
     return this.socket?.connected ?? false;
-  }
-
-  getToken(): string | null {
-    return this.currentToken;
   }
 
   joinConversation(conversationId: string): void {

@@ -92,21 +92,41 @@ export function useSendMessage() {
           return { ...old, pages };
         },
       );
+
+      const sendData = variables.data;
+      const lastMessagePreview =
+        sendData.type === 'text'
+          ? sendData.content.substring(0, 100)
+          : `[${sendData.type}]`;
+
       queryClient.setQueryData<InfiniteData<{ conversations: Conversation[] }>>(
         ['conversations'],
         (old) => {
           if (!old?.pages) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              conversations: page.conversations.map((c) =>
-                c._id === variables.data.conversationId
-                  ? { ...c, lastMessage: message.content, lastMessageAt: message.createdAt }
-                  : c,
-              ),
-            })),
+
+          let moved: Conversation | null = null;
+          const pages = old.pages.map((page) => {
+            const remaining = page.conversations.filter((c) => {
+              if (c._id === variables.data.conversationId) {
+                moved = {
+                  ...c,
+                  lastMessage: lastMessagePreview,
+                  lastMessageAt: message.createdAt,
+                };
+                return false;
+              }
+              return true;
+            });
+            return { ...page, conversations: remaining };
+          });
+
+          if (!moved) return old;
+
+          pages[0] = {
+            ...pages[0],
+            conversations: [moved, ...pages[0].conversations],
           };
+          return { ...old, pages };
         },
       );
     },

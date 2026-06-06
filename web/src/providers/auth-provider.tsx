@@ -20,17 +20,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = await authApi.me();
         store.setUser(user);
         store.setIsAuthenticated(true);
-
-        try {
-          const refreshRes = await authApi.refresh();
-          store.setAccessToken(refreshRes.access_token);
-        } catch {
-          store.setAccessToken(null);
-        }
       } catch {
-        store.setUser(null);
-        store.setIsAuthenticated(false);
-        store.setAccessToken(null);
+        try {
+          await authApi.refresh();
+          const user = await authApi.me();
+          store.setUser(user);
+          store.setIsAuthenticated(true);
+        } catch {
+          store.setUser(null);
+          store.setIsAuthenticated(false);
+        }
       } finally {
         useAuthStore.getState().setIsLoading(false);
       }
@@ -41,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleForceLogout = () => {
-      socketManager.disconnect();
+      socketManager.fullCleanup();
       useAuthStore.getState().logout();
     };
     window.addEventListener('auth:logout', handleForceLogout);

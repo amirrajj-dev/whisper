@@ -12,6 +12,7 @@ import { ChevronLeft, Search, X, ChevronUp, ChevronDown, MoreVertical, Shield, S
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '@/src/stores/chat.store';
+import { usePresenceStore } from '@/src/stores/presence.store';
 import { userApi } from '@/src/services/user.api';
 import { toast } from 'sonner';
 
@@ -51,7 +52,10 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
   const avatar = getConversationAvatar(conversation, user?._id);
   const participants = conversation.participants as PopulatedUser[];
   const otherParticipant = participants.find((p) => p._id !== user?._id);
-  const isOnline = !isGroup && otherParticipant?.lastSeen === null;
+  const isOnline = usePresenceStore((s) =>
+    otherParticipant ? s.onlineUsers.has(otherParticipant._id) : false,
+  );
+  const otherParticipantLastSeen = otherParticipant?.lastSeen;
 
   const {
     isSearchActive,
@@ -265,7 +269,7 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                   }
                   if (isGroup) return `${getParticipantCount(conversation)} members`;
                   if (isOnline) return 'Online';
-                  if (otherParticipant?.lastSeen) return `Last seen ${formatDistanceToNow(new Date(otherParticipant.lastSeen), { addSuffix: true })}`;
+                  if (otherParticipantLastSeen) return `Last seen ${formatDistanceToNow(new Date(otherParticipantLastSeen), { addSuffix: true })}`;
                   return '';
                 })()}
               </p>
@@ -402,7 +406,7 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
         onClose={() => setShowProfileModal(false)}
         user={otherParticipant || null}
         isOnline={isOnline}
-        lastSeen={otherParticipant?.lastSeen}
+        lastSeen={otherParticipantLastSeen}
       />
 
       <GroupDetailsModal

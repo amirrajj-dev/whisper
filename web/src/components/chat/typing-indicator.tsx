@@ -8,22 +8,41 @@ interface TypingIndicatorProps {
   conversationId: string;
 }
 
+const TYPING_TIMEOUT = 4000;
+
 export function TypingIndicator({ conversationId }: TypingIndicatorProps) {
   const { typingUsers, removeTypingUser } = useChatStore();
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const conversationIdRef = useRef(conversationId);
+
+  conversationIdRef.current = conversationId;
 
   const users = typingUsers[conversationId];
 
   useEffect(() => {
+    const currentIds = new Set(users?.map((u) => u.userId) || []);
+    const existingIds = new Set(timersRef.current.keys());
+
+    for (const id of existingIds) {
+      if (!currentIds.has(id)) {
+        clearTimeout(timersRef.current.get(id)!);
+        timersRef.current.delete(id);
+      }
+    }
+
     if (!users?.length) return;
+
     for (const u of users) {
-      if (timersRef.current.has(u.userId)) continue;
+      if (timersRef.current.has(u.userId)) {
+        clearTimeout(timersRef.current.get(u.userId)!);
+      }
       const timer = setTimeout(() => {
-        removeTypingUser(conversationId, u.userId);
+        removeTypingUser(conversationIdRef.current, u.userId);
         timersRef.current.delete(u.userId);
-      }, 5000);
+      }, TYPING_TIMEOUT);
       timersRef.current.set(u.userId, timer);
     }
+
     return () => {
       for (const [, timer] of timersRef.current) clearTimeout(timer);
       timersRef.current.clear();
