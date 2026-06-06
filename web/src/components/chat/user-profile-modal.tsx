@@ -11,6 +11,7 @@ import {
   Shield,
   ShieldOff,
   User,
+  MessageCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PopulatedUser } from '@/src/types/entities/user';
@@ -149,6 +150,20 @@ export function UserProfileModal({
                 )}
               </motion.div>
             </div>
+
+            {targetUser.bio && (
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.18 }}
+                className="px-6"
+              >
+                <div className="flex items-start gap-2 px-4 py-3 bg-base-200/50 rounded-xl">
+                  <MessageCircle className="w-3.5 h-3.5 text-base-content/40 mt-0.5 shrink-0" />
+                  <p className="text-sm text-base-content/70 leading-relaxed">{targetUser.bio}</p>
+                </div>
+              </motion.div>
+            )}
 
             <motion.div
               initial={{ y: 10, opacity: 0 }}

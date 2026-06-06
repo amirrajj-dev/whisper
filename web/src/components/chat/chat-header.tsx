@@ -58,6 +58,7 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
     searchQuery,
     searchActiveMatchIndex,
     searchMatchIds,
+    typingUsers,
     setSearchActive,
     setSearchQuery,
     setSearchActiveMatchIndex,
@@ -254,14 +255,19 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-base-content/40 truncate">
-                {isGroup
-                  ? `${getParticipantCount(conversation)} members`
-                  : isOnline
-                    ? 'Online'
-                    : otherParticipant?.lastSeen
-                      ? `Last seen ${formatDistanceToNow(new Date(otherParticipant.lastSeen), { addSuffix: true })}`
-                      : ''}
+              <p className="text-xs text-base-content/40 truncate min-h-[16px]">
+                {(() => {
+                  const typingUsersList = !isGroup && conversation?._id ? typingUsers[conversation._id] : undefined;
+                  if (typingUsersList?.length) {
+                    const names = typingUsersList.map((u) => u.username).filter(Boolean);
+                    const text = names.length === 1 ? `${names[0]} is typing...` : `${names.length} people are typing...`;
+                    return <span className="text-success">{text}</span>;
+                  }
+                  if (isGroup) return `${getParticipantCount(conversation)} members`;
+                  if (isOnline) return 'Online';
+                  if (otherParticipant?.lastSeen) return `Last seen ${formatDistanceToNow(new Date(otherParticipant.lastSeen), { addSuffix: true })}`;
+                  return '';
+                })()}
               </p>
             </div>
           </button>

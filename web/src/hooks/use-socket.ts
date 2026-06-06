@@ -25,6 +25,7 @@ import type { Conversation } from "@/src/types/entities/conversation";
 import type { Notification } from "@/src/types/entities/notification";
 import type { PopulatedUser } from "@/src/types/entities/user";
 import type { InfiniteData } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 function getTypingUsername(
   conversationsData:
@@ -462,6 +463,14 @@ export function useSocket() {
         return { ...old, pages };
       });
       incrementUnread();
+
+      const n = notification as unknown as { message?: string; type?: string };
+      if (n?.message && n?.type) {
+        toast.info(n.message, {
+          duration: 4000,
+          position: "top-right",
+        });
+      }
     });
 
     return () => {

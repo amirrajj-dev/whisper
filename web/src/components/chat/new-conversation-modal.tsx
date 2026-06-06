@@ -32,19 +32,19 @@ export function NewConversationModal({
   const [creating, setCreating] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setUsers([]);
-      return;
-    }
+  const loadUsers = useCallback(async (query: string) => {
     setLoading(true);
     try {
-      const res = await userApi.getUsers({ page: 1, limit: 10 });
-      const filtered = (res.users as User[])?.filter((u: User) =>
-        u.username.toLowerCase().includes(query.toLowerCase()) ||
-        u.email.toLowerCase().includes(query.toLowerCase())
-      ) || [];
-      setUsers(filtered);
+      const res = await userApi.getUsers({ page: 1, limit: 50 });
+      if (!query.trim()) {
+        setUsers(res.users as User[]);
+      } else {
+        const filtered = (res.users as User[])?.filter((u: User) =>
+          u.username.toLowerCase().includes(query.toLowerCase()) ||
+          u.email.toLowerCase().includes(query.toLowerCase())
+        ) || [];
+        setUsers(filtered);
+      }
     } catch {
       setUsers([]);
     } finally {
@@ -64,10 +64,9 @@ export function NewConversationModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => searchUsers(searchQuery), 300);
-    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
-  }, [searchQuery, searchUsers]);
+    if (!isOpen) return;
+    loadUsers(searchQuery);
+  }, [isOpen, searchQuery, loadUsers]);
 
   const toggleUser = (user: User) => {
     setSelectedUsers((prev) =>
@@ -256,9 +255,9 @@ export function NewConversationModal({
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-5 h-5 animate-spin text-base-content/40" />
                   </div>
-                ) : users.length === 0 && searchQuery ? (
+                ) : users.length === 0 ? (
                   <div className="text-center py-8 text-sm text-base-content/40">
-                    No users found
+                    {searchQuery ? 'No users found' : 'No users available'}
                   </div>
                 ) : (
                   users.map((u) => {

@@ -16,6 +16,9 @@ export const notificationApi = {
   markAllAsRead: () =>
     api.patch<{ message: string }>('/notification/read-all').then((r) => r.data),
 
+  deleteAll: () =>
+    api.delete<{ message: string }>('/notification/all').then((r) => r.data),
+
   delete: (id: string) =>
     api.delete<{ message: string }>(`/notification/${id}`).then((r) => r.data),
 };

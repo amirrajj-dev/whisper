@@ -68,6 +68,21 @@ export function useMarkAllAsRead() {
   });
 }
 
+export function useDeleteAllNotifications() {
+  const queryClient = useQueryClient();
+  const { resetUnread } = useNotificationStore();
+
+  return useMutation({
+    mutationFn: () => notificationApi.deleteAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      resetUnread();
+      toast.success('All notifications deleted');
+    },
+  });
+}
+
 export function useDeleteNotification() {
   const queryClient = useQueryClient();
 

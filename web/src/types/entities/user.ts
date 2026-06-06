@@ -25,5 +25,6 @@ export interface PopulatedUser {
   username: string;
   email: string;
   avatarUrl?: string;
+  bio?: string;
   lastSeen?: string | null;
 }

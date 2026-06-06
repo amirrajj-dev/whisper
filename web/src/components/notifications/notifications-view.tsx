@@ -1,8 +1,10 @@
 'use client';
 
-import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification } from '@/src/hooks/use-notifications';
+import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useDeleteAllNotifications } from '@/src/hooks/use-notifications';
 import { NotificationItem } from './notification-item';
-import { ChevronLeft, Bell, CheckCheck, Loader2, Inbox } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, Bell, CheckCheck, Loader2, Inbox, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface NotificationsViewProps {
   onBack?: () => void;
@@ -13,6 +15,8 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
   const deleteNotification = useDeleteNotification();
+  const deleteAllNotifications = useDeleteAllNotifications();
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const notifications = data?.pages.flatMap((p) => p.notifications) ?? [];
 
@@ -29,35 +33,41 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
           <h2 className="font-semibold">Notifications</h2>
         </div>
         {notifications.length > 0 && (
-          <button
-            onClick={() => markAllAsRead.mutate()}
-            disabled={markAllAsRead.isPending}
-            className="btn btn-ghost btn-xs gap-1"
-            title="Mark all as read"
-          >
-            {markAllAsRead.isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <CheckCheck className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">Mark all read</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => markAllAsRead.mutate()}
+              disabled={markAllAsRead.isPending}
+              className="btn btn-ghost btn-xs gap-1"
+              title="Mark all as read"
+            >
+              {markAllAsRead.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <CheckCheck className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">Mark all read</span>
+            </button>
+            <button
+              onClick={() => setShowDeleteAllConfirm(true)}
+              disabled={deleteAllNotifications.isPending}
+              className="btn btn-ghost btn-xs btn-square text-error/60 hover:text-error"
+              title="Delete all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-base-content/40" />
-          </div>
-        ) : notifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 rounded-2xl bg-base-200 flex items-center justify-center mb-4">
               <Inbox className="w-8 h-8 text-base-content/40" />
             </div>
             <h3 className="text-lg font-semibold">All caught up!</h3>
             <p className="text-sm text-base-content/60 mt-1 max-w-sm">
-              You have no unread notifications. New messages and activity will appear here.
+              You have no notifications. New messages and activity will appear here.
             </p>
           </div>
         ) : (
@@ -86,6 +96,45 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
           </>
         )}
       </div>
+
+      <AnimatePresence>
+        {showDeleteAllConfirm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowDeleteAllConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm mx-4 bg-base-100 rounded-2xl shadow-2xl border border-base-300 p-6"
+            >
+              <h3 className="font-semibold text-lg mb-2">Delete all notifications?</h3>
+              <p className="text-sm text-base-content/60 mb-4">
+                This will permanently delete all your notifications. This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowDeleteAllConfirm(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                <button
+                  onClick={() => {
+                    deleteAllNotifications.mutate(undefined, {
+                      onSuccess: () => setShowDeleteAllConfirm(false),
+                    });
+                  }}
+                  className="btn btn-error btn-sm"
+                >
+                  {deleteAllNotifications.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Delete all
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
