@@ -30,10 +30,15 @@ export class NotificationListener {
       (id) => id !== senderId,
     );
 
-    // Parallel execution (not sequential)
     await Promise.all(
-      otherParticipants.map((userId) =>
-        this.notificationService
+      otherParticipants.map(async (userId) => {
+        const isInRoom = await this.gatewayService.isUserInConversation(
+          userId,
+          conversationId,
+        );
+        if (isInRoom) return;
+
+        return this.notificationService
           .create({
             userId,
             type: 'message',
@@ -44,8 +49,8 @@ export class NotificationListener {
             this.logger?.error?.(
               `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
             );
-          }),
-      ),
+          });
+      }),
     );
   }
 

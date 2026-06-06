@@ -112,6 +112,19 @@ export class GatewayService implements OnModuleInit {
     return result;
   }
 
+  async isUserInConversation(userId: string, conversationId: string): Promise<boolean> {
+    if (!this.server) return false;
+    const socketIds = this.userSockets.get(userId);
+    if (!socketIds || socketIds.size === 0) return false;
+    const roomName = `conversation:${conversationId}`;
+    const room = this.server.sockets.adapter.rooms.get(roomName);
+    if (!room) return false;
+    for (const socketId of socketIds) {
+      if (room.has(socketId)) return true;
+    }
+    return false;
+  }
+
   getConnectionStats(): { onlineUsers: number; activeSockets: number } {
     return {
       onlineUsers: this.userSockets.size,
