@@ -6,8 +6,8 @@ import type { PopulatedUser } from "@/src/types/entities/user";
 import { useCurrentUser } from "@/src/hooks/use-auth";
 import { UserAvatar } from "@/src/components/common/user-avatar";
 import { format } from "date-fns";
-import { FileText, Reply, Edit3, Trash2, Download, Film, Mic, Play } from "lucide-react";
-import { useState } from "react";
+import { FileText, Reply, Edit3, Trash2, Download, Film, Play, Pause, Maximize2, FileArchive, FileSpreadsheet, FileType, ImageIcon, Music } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 interface MessageBubbleProps {
   message: Message;
@@ -68,19 +68,405 @@ function getFileNameFromUrl(url: string): string {
   }
 }
 
-function getFileExtension(filename: string): string {
-  const dot = filename.lastIndexOf(".");
-  return dot > 0 ? filename.slice(dot + 1).toUpperCase() : "";
+
+const FILE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
+  pdf: { icon: FileText, color: 'text-error' },
+  doc: { icon: FileText, color: 'text-blue-500' },
+  docx: { icon: FileText, color: 'text-blue-500' },
+  xls: { icon: FileSpreadsheet, color: 'text-emerald-500' },
+  xlsx: { icon: FileSpreadsheet, color: 'text-emerald-500' },
+  zip: { icon: FileArchive, color: 'text-amber-500' },
+  rar: { icon: FileArchive, color: 'text-amber-500' },
+  '7z': { icon: FileArchive, color: 'text-amber-500' },
+  gz: { icon: FileArchive, color: 'text-amber-500' },
+  jpg: { icon: ImageIcon, color: 'text-sky-500' },
+  jpeg: { icon: ImageIcon, color: 'text-sky-500' },
+  png: { icon: ImageIcon, color: 'text-sky-500' },
+  gif: { icon: ImageIcon, color: 'text-sky-500' },
+  webp: { icon: ImageIcon, color: 'text-sky-500' },
+  svg: { icon: ImageIcon, color: 'text-sky-500' },
+  mp4: { icon: Film, color: 'text-purple-500' },
+  webm: { icon: Film, color: 'text-purple-500' },
+  mov: { icon: Film, color: 'text-purple-500' },
+  avi: { icon: Film, color: 'text-purple-500' },
+  mp3: { icon: Music, color: 'text-violet-500' },
+  wav: { icon: Music, color: 'text-violet-500' },
+  ogg: { icon: Music, color: 'text-violet-500' },
+  flac: { icon: Music, color: 'text-violet-500' },
+  txt: { icon: FileType, color: 'text-base-content/60' },
+  json: { icon: FileType, color: 'text-base-content/60' },
+  js: { icon: FileType, color: 'text-yellow-500' },
+  ts: { icon: FileType, color: 'text-blue-500' },
+  py: { icon: FileType, color: 'text-yellow-600' },
+  html: { icon: FileType, color: 'text-orange-500' },
+  css: { icon: FileType, color: 'text-blue-400' },
+};
+
+function getFileInfo(filename: string): { ext: string; icon: typeof FileText; color: string; label: string } {
+  const dot = filename.lastIndexOf('.');
+  const ext = dot > 0 ? filename.slice(dot + 1).toLowerCase() : '';
+  const info = FILE_ICONS[ext];
+  const labelMap: Record<string, string> = {
+    pdf: 'PDF Document',
+    doc: 'Word Document', docx: 'Word Document',
+    xls: 'Spreadsheet', xlsx: 'Spreadsheet',
+    zip: 'Archive', rar: 'Archive', '7z': 'Archive', gz: 'Archive',
+    jpg: 'Image', jpeg: 'Image', png: 'Image', gif: 'Image', webp: 'Image', svg: 'Image',
+    mp4: 'Video', webm: 'Video', mov: 'Video', avi: 'Video',
+    mp3: 'Audio', wav: 'Audio', ogg: 'Audio', flac: 'Audio',
+    txt: 'Text', json: 'Data', js: 'Script', ts: 'Script', py: 'Script', html: 'Page', css: 'Stylesheet',
+  };
+  if (info) return { ext, icon: info.icon, color: info.color, label: labelMap[ext] || `${ext.toUpperCase()} File` };
+  return { ext, icon: FileText, color: 'text-primary', label: `${ext ? ext.toUpperCase() : ''} File` };
 }
 
-function formatFileSize(bytes?: number): string {
-  if (!bytes || bytes <= 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function FileMessageCard({ src, isOwn }: { src: string; isOwn: boolean }) {
+  const fileName = getFileNameFromUrl(src);
+  const { ext, icon: Icon, color, label } = useMemo(() => getFileInfo(fileName), [fileName]);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={fileName}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`flex items-center gap-3 rounded-xl p-3 transition-all duration-200 max-w-[300px] sm:max-w-[340px] group ${
+        isOwn
+          ? 'bg-primary-content/10 hover:bg-primary-content/15'
+          : 'bg-base-300/50 hover:bg-base-300/70'
+      } ${isHovered ? 'scale-[1.02]' : 'scale-100'}`}
+    >
+      <div className="relative shrink-0">
+        <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+          isOwn ? 'bg-primary-content/15' : 'bg-base-300/70'
+        }`}>
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
+        </div>
+        {ext && (
+          <span className={`absolute -top-1.5 -right-1.5 px-1 py-0.5 rounded-md text-[9px] font-bold uppercase leading-tight shadow-sm ${
+            isOwn ? 'bg-primary text-primary-content' : 'bg-base-100 text-base-content'
+          }`}>
+            {ext}
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium truncate ${isOwn ? 'text-primary-content/90' : 'text-base-content/90'}`}>
+          {fileName}
+        </p>
+        <p className={`text-xs mt-0.5 ${isOwn ? 'text-primary-content/50' : 'text-base-content/40'}`}>
+          {label}
+        </p>
+      </div>
+
+      <div className={`shrink-0 transition-all duration-200 ${
+        isHovered ? 'opacity-100 scale-110' : 'opacity-40 scale-100'
+      }`}>
+        <Download className={`w-5 h-5 ${isOwn ? 'text-primary-content/70' : 'text-primary'}`} />
+      </div>
+    </a>
+  );
 }
 
-function MessageContent({ message, searchQuery }: { message: Message; searchQuery?: string }) {
+function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(1);
+  const PLAYBACK_SPEEDS = useMemo(() => [0.5, 1, 1.5, 2], []);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime = () => setCurrentTime(v.currentTime);
+    const onDur = () => { if (v.duration && isFinite(v.duration)) setDuration(v.duration); };
+    const onEnd = () => setIsPlaying(false);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('durationchange', onDur);
+    v.addEventListener('ended', onEnd);
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', onPause);
+    if (v.readyState >= 1 && v.duration) onDur();
+    return () => {
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('durationchange', onDur);
+      v.removeEventListener('ended', onEnd);
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', onPause);
+    };
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  }, []);
+
+  const cycleSpeed = useCallback(() => {
+    const next = (speedIdx + 1) % PLAYBACK_SPEEDS.length;
+    setSpeedIdx(next);
+    if (videoRef.current) videoRef.current.playbackRate = PLAYBACK_SPEEDS[next];
+  }, [speedIdx, PLAYBACK_SPEEDS]);
+
+  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const v = videoRef.current;
+    const bar = progressRef.current;
+    if (!v || !bar || !duration) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    v.currentTime = ratio * duration;
+    setCurrentTime(v.currentTime);
+  }, [duration]);
+
+  const toggleFullscreen = useCallback(async () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => {});
+    } else {
+      await v.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const fmt = (s: number) => {
+    if (!s || !isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={`max-w-[300px] sm:max-w-[340px] rounded-xl overflow-hidden ${
+      isOwn ? 'bg-primary/10' : 'bg-base-300/40'
+    }`}>
+      <div className="relative group cursor-pointer" onClick={togglePlay}>
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full aspect-video object-cover bg-black"
+          preload="metadata"
+          playsInline
+        />
+
+        {!isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity group-hover:bg-black/30">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl transition-transform group-hover:scale-105">
+              <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-current text-gray-900 ml-1" />
+            </div>
+          </div>
+        )}
+
+        <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+
+        {duration > 0 && (
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[11px] font-medium tabular-nums">
+            {fmt(duration)}
+          </div>
+        )}
+
+        <div
+          className={`absolute bottom-1.5 inset-x-2 h-0.5 rounded-full overflow-hidden ${
+            isPlaying ? 'opacity-100' : 'opacity-0'
+          } transition-opacity duration-300`}
+        >
+          <div
+            className="h-full rounded-full bg-white/80 transition-all duration-100"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      <div className={`flex items-center gap-2 px-3 py-2 ${
+        isOwn ? 'text-primary-content' : 'text-base-content'
+      }`}>
+        <Film className="w-4 h-4 shrink-0 opacity-50" />
+        <span className="text-xs font-medium opacity-60">{fmt(isPlaying || currentTime > 0 ? currentTime : duration)}</span>
+        <div className="flex-1" />
+
+        <button
+          onClick={toggleFullscreen}
+          className="p-1 rounded opacity-40 hover:opacity-80 transition-opacity"
+          title="Fullscreen"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={cycleSpeed}
+          className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 ${
+            speedIdx !== 1 ? 'opacity-100 font-extrabold' : 'opacity-50'
+          }`}
+        >
+          {PLAYBACK_SPEEDS[speedIdx]}x
+        </button>
+      </div>
+
+      <div
+        ref={progressRef}
+        onClick={seek}
+        className={`relative h-1 cursor-pointer overflow-hidden ${
+          isOwn ? 'bg-primary-content/10' : 'bg-base-content/10'
+        }`}
+      >
+        <div
+          className={`absolute inset-y-0 left-0 transition-all duration-100 ${
+            isOwn ? 'bg-primary-content/60' : 'bg-primary/50'
+          }`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speedIdx, setSpeedIdx] = useState(1);
+  const PLAYBACK_SPEEDS = useMemo(() => [0.5, 1, 1.5, 2], []);
+
+  const barHeights = useMemo(
+    () => [15, 22, 30, 40, 52, 62, 70, 65, 55, 42, 30, 20, 15, 22, 35, 48, 60, 72, 78, 68, 55, 38, 25, 16, 20, 35, 50, 62, 52, 28],
+    [],
+  );
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => setCurrentTime(audio.currentTime);
+    const onDur = () => { if (audio.duration && isFinite(audio.duration)) setDuration(audio.duration); };
+    const onEnd = () => setIsPlaying(false);
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('durationchange', onDur);
+    audio.addEventListener('ended', onEnd);
+    if (audio.readyState >= 1 && audio.duration) onDur();
+    return () => {
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('durationchange', onDur);
+      audio.removeEventListener('ended', onEnd);
+    };
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (isPlaying) { a.pause(); setIsPlaying(false); }
+    else { a.play().then(() => setIsPlaying(true)).catch(() => {}); }
+  }, [isPlaying]);
+
+  const cycleSpeed = useCallback(() => {
+    const next = (speedIdx + 1) % PLAYBACK_SPEEDS.length;
+    setSpeedIdx(next);
+    if (audioRef.current) audioRef.current.playbackRate = PLAYBACK_SPEEDS[next];
+  }, [speedIdx, PLAYBACK_SPEEDS]);
+
+  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const a = audioRef.current;
+    const bar = progressRef.current;
+    if (!a || !bar || !duration) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    a.currentTime = ratio * duration;
+    setCurrentTime(a.currentTime);
+  }, [duration]);
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const fmt = (s: number) => {
+    if (!s || !isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={`flex items-center gap-2 min-w-[220px] sm:min-w-[280px] ${isOwn ? 'text-primary-content' : 'text-base-content'}`}>
+      <audio ref={audioRef} src={src} preload="metadata" />
+
+      <button
+        onClick={togglePlay}
+        className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${
+          isOwn
+            ? 'bg-primary-content/15 hover:bg-primary-content/25 text-primary-content'
+            : 'bg-primary/10 hover:bg-primary/20 text-primary'
+        }`}
+      >
+        {isPlaying ? (
+          <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+        ) : (
+          <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" />
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <div className="flex items-end gap-[2px] h-8 sm:h-10 overflow-hidden">
+          {barHeights.map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-full transition-all duration-150 ease-linear"
+              style={{
+                height: `${h}%`,
+                backgroundColor: isOwn
+                  ? isPlaying
+                    ? `rgba(255,255,255,${0.2 + Math.abs(Math.sin(Date.now() * 0.003 + i * 0.4)) * 0.5})`
+                    : 'rgba(255,255,255,0.25)'
+                  : isPlaying
+                    ? `rgba(0,0,0,${0.15 + Math.abs(Math.sin(Date.now() * 0.003 + i * 0.4)) * 0.4})`
+                    : 'rgba(0,0,0,0.15)',
+                transformOrigin: 'bottom',
+              }}
+            />
+          ))}
+        </div>
+
+        <div
+          ref={progressRef}
+          onClick={seek}
+          className={`relative h-1 rounded-full cursor-pointer overflow-hidden ${
+            isOwn ? 'bg-primary-content/20' : 'bg-base-content/15'
+          }`}
+        >
+          <div
+            className={`absolute inset-y-0 left-0 rounded-full transition-all duration-100 ${
+              isOwn ? 'bg-primary-content/70' : 'bg-primary/60'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] sm:text-xs font-medium tabular-nums opacity-60">
+            {fmt(isPlaying || currentTime > 0 ? currentTime : duration)}
+          </span>
+          <button
+            onClick={cycleSpeed}
+            className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 ${
+              speedIdx !== 1 ? 'opacity-100 font-extrabold' : 'opacity-50'
+            } ${isOwn ? 'text-primary-content/80' : 'text-base-content/60'}`}
+          >
+            {PLAYBACK_SPEEDS[speedIdx]}x
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageContent({ message, searchQuery, isOwn }: { message: Message; searchQuery?: string; isOwn: boolean }) {
   if (message.deleted) {
     return (
       <span className="italic text-primary-content text-xs">
@@ -102,69 +488,15 @@ function MessageContent({ message, searchQuery }: { message: Message; searchQuer
         </div>
       );
     case "video":
-      return (
-        <div className="max-w-[280px] rounded-lg overflow-hidden bg-base-300/50">
-          <div className="relative">
-            <video
-              src={message.content}
-              controls
-              className="w-full aspect-video"
-              preload="metadata"
-            >
-              <source src={message.content} type="video/mp4" />
-            </video>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 text-xs text-base-content/60">
-            <Film className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Video</span>
-          </div>
-        </div>
-      );
+      return <VideoMessagePlayer src={message.content} isOwn={isOwn} />;
     case "voice":
       return (
-        <div className="max-w-[260px] rounded-lg overflow-hidden bg-base-300/50">
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Mic className="w-4 h-4 text-primary" />
-            </div>
-            <audio
-              src={message.content}
-              controls
-              className="flex-1 h-8 min-w-[140px]"
-              preload="metadata"
-              controlsList="nodownload"
-            >
-              <source src={message.content} type="audio/mpeg" />
-              <source src={message.content} type="audio/ogg" />
-              <source src={message.content} type="audio/wav" />
-            </audio>
-          </div>
+        <div className="max-w-[300px] sm:max-w-[340px] -mx-1.5">
+          <VoiceMessagePlayer src={message.content} isOwn={isOwn} />
         </div>
       );
     case "file":
-      const fileName = getFileNameFromUrl(message.content);
-      const fileExt = getFileExtension(fileName);
-      return (
-        <a
-          href={message.content}
-          target="_blank"
-          rel="noopener noreferrer"
-          download={fileName}
-          className="flex items-center gap-3 text-sm bg-base-300/50 rounded-lg p-3 hover:bg-base-300 transition-colors group max-w-[280px]"
-        >
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{fileName}</p>
-            <p className="text-xs text-base-content/40">
-              {fileExt ? `${fileExt} file` : "File"}
-              {message.publicId ? " \u00B7 Click to download" : ""}
-            </p>
-          </div>
-          <Download className="w-4 h-4 text-base-content/30 group-hover:text-primary transition-colors shrink-0" />
-        </a>
-      );
+      return <FileMessageCard src={message.content} isOwn={isOwn} />;
     default:
       return <HighlightedText text={message.content} query={searchQuery} />;
   }
@@ -273,7 +605,7 @@ export function MessageBubble({
               </div>
 
               <div>
-                <MessageContent message={message} searchQuery={searchQuery} />
+                <MessageContent message={message} searchQuery={searchQuery} isOwn={isOwn} />
               </div>
             </div>
 
@@ -304,7 +636,7 @@ export function MessageBubble({
                   : "bg-base-200 rounded-2xl rounded-tl-md"
               }`}
             >
-              <MessageContent message={message} searchQuery={searchQuery} />
+              <MessageContent message={message} searchQuery={searchQuery} isOwn={isOwn} />
               <div
                 className={`flex items-center gap-1 mt-0.5 ${
                   isOwn ? "justify-end" : "justify-start"
