@@ -7,8 +7,12 @@ let failedQueue: Array<{
 }> = [];
 
 const processQueue = (error: unknown) => {
-  failedQueue.forEach(({ reject }) => {
-    reject(error);
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(undefined);
+    }
   });
   failedQueue = [];
 };

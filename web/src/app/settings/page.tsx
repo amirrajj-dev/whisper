@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/src/stores/auth.store";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Palette, Shield, Bell } from "lucide-react";
+import { ArrowLeft, Palette, Shield, Bell, Loader2 } from "lucide-react";
 import {
   useThemeStore,
   type Theme,
@@ -29,7 +32,31 @@ const themePreviews: Record<Theme, string> = {
 };
 
 export default function SettingsPage() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+  const router = useRouter();
   const { theme, setTheme } = useThemeStore();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-base-100">

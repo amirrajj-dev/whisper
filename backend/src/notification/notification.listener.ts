@@ -38,6 +38,11 @@ export class NotificationListener {
         );
         if (isInRoom) return;
 
+        // User isn't in the conversation room — emit message:new directly to
+        // their socket(s) so the chat cache updates immediately, alongside
+        // the notification for the drawer
+        this.gatewayService.emitToUser(userId, 'message:new', payload);
+
         return this.notificationService
           .create({
             userId,

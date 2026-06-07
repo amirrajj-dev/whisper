@@ -8,6 +8,7 @@ import { userApi } from '@/src/services/user.api';
 import { chatApi } from '@/src/services/chat.api';
 import { toast } from 'sonner';
 import type { User } from '@/src/types/entities/user';
+import type { Conversation } from '@/src/types/entities/conversation';
 
 interface NewConversationModalProps {
   isOpen: boolean;
@@ -91,7 +92,11 @@ export function NewConversationModal({
           participants: [selectedUsers[0]._id],
         });
         onConversationCreated(conv._id);
-        toast.success('Conversation created');
+        if ((conv as Conversation & { isExisting?: boolean }).isExisting) {
+          toast.success('Conversation with this user already exists');
+        } else {
+          toast.success('Conversation created');
+        }
       } catch (err) {
         toast.error((err as { message?: string })?.message || 'Failed to create conversation');
       } finally {

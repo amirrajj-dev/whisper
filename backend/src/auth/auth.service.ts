@@ -139,7 +139,6 @@ export class AuthService {
         expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRES_IN') || '30d',
       });
 
-      await this.deleteOldRefreshToken(user._id);
       await this.saveRefreshToken(user._id, refreshToken);
 
       this.logger.log(`User ${email} logged in successfully`);

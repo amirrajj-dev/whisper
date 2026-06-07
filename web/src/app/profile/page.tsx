@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useCurrentUser } from '@/src/hooks/use-auth';
 import { useAuthStore } from '@/src/stores/auth.store';
@@ -23,8 +24,16 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
+  const router = useRouter();
   const { user, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, isAuthLoading, router]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,10 +76,18 @@ export default function ProfilePage() {
     setAvatarPreview(URL.createObjectURL(file));
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-100">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }

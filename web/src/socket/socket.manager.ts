@@ -39,6 +39,7 @@ class SocketManager {
 
     s.on("connect", () => {
       this.reconnectAttempts = 0;
+      this.rejoinRooms();
     });
 
     s.on("connect_error", (err: Error) => {
