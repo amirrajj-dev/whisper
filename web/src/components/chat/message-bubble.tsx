@@ -254,22 +254,35 @@ export function MessageBubble({
                   isOwn ? "justify-end" : "justify-start"
                 }`}
               >
-                <span
-                  className={`text-[10px] ${isOwn ? "text-primary-content/60" : "text-base-content/40"}`}
-                >
-                  {format(new Date(message.createdAt), "HH:mm")}
-                </span>
-                {message.edited && !message.deleted && (
                   <span
-                    className={`text-[10px] ${isOwn ? "text-primary-content/50" : "text-base-content/30"}`}
+                    className={`text-[10px] ${isOwn ? "text-primary-content/60" : "text-base-content/40"}`}
                   >
-                    edited
+                    {format(new Date(message.createdAt), "HH:mm")}
                   </span>
-                )}
+                  {isOwn && !message.deleted && (
+                    <span className="text-[10px]">
+                      {message.deliveredTo && message.deliveredTo.length > 1 ? (
+                        <svg className="w-3.5 h-3.5 text-primary-content/50" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z"/>
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 text-primary-content/40" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z"/>
+                        </svg>
+                      )}
+                    </span>
+                  )}
+                  {message.edited && !message.deleted && (
+                    <span
+                      className={`text-[10px] ${isOwn ? "text-primary-content/50" : "text-base-content/30"}`}
+                    >
+                      edited
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
         {/* Action Buttons */}
         {showActions && !message.deleted && (

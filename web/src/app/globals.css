@@ -2,3 +2,16 @@
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark , coffee, night , forest , dracula;
 }
+
+  [data-sonner-toast][data-x-position="right"] {
+    @apply bg-base-300! border-none!;
+  }
+  [data-sonner-toast][data-styled="true"] [data-title] {
+    @apply text-primary!;
+  }
+  [data-sonner-toast][data-styled="true"] [data-icon] {
+    @apply text-primary!;
+  }
+  [data-rich-colors=true][data-sonner-toast][data-type=error] [data-close-button] {
+    @apply text-primary!
+  }

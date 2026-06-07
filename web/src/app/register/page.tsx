@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState, useMemo, useEffect } from "react";
 import {
   Eye,
   EyeOff,
@@ -18,51 +18,52 @@ import {
   User,
   Check,
   X,
-} from 'lucide-react';
-import { useRegister, useCurrentUser } from '@/src/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+} from "lucide-react";
+import { useRegister, useCurrentUser } from "@/src/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 const registerSchema = z
   .object({
     username: z
       .string()
-      .min(3, 'Username must be at least 3 characters')
-      .max(20, 'Username must be at most 20 characters')
-      .regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores'),
-    email: z.string().email('Please enter a valid email'),
+      .min(3, "Username must be at least 3 characters")
+      .max(20, "Username must be at most 20 characters")
+      .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores"),
+    email: z.string().email("Please enter a valid email"),
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters')
+      .min(8, "Password must be at least 8 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
-        'Password must contain uppercase, lowercase, number, and special character',
+        "Password must contain uppercase, lowercase, number, and special character",
       ),
     confirmPassword: z.string(),
-    acceptTerms: z.literal(true, { message: 'You must accept the terms' }),
+    acceptTerms: z.literal(true, { message: "You must accept the terms" }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
-const blobAnimation = (i: number) => ({
-  scale: [1, 1.15, 1],
-  rotate: [0, 180, 360],
-  opacity: [0.12, 0.2, 0.12] as number[],
-  transition: {
-    duration: 10 + i * 3,
-    repeat: Infinity,
-    ease: 'linear' as const,
-  },
-}) satisfies import('framer-motion').TargetAndTransition;
+const blobAnimation = (i: number) =>
+  ({
+    scale: [1, 1.15, 1],
+    rotate: [0, 180, 360],
+    opacity: [0.12, 0.2, 0.12] as number[],
+    transition: {
+      duration: 10 + i * 3,
+      repeat: Infinity,
+      ease: "linear" as const,
+    },
+  }) satisfies import("framer-motion").TargetAndTransition;
 
 const strengthConfig = [
-  { label: 'Weak', color: 'bg-error', minScore: 0 },
-  { label: 'Fair', color: 'bg-warning', minScore: 1 },
-  { label: 'Good', color: 'bg-info', minScore: 2 },
-  { label: 'Strong', color: 'bg-success', minScore: 3 },
+  { label: "Weak", color: "bg-error", minScore: 0 },
+  { label: "Fair", color: "bg-warning", minScore: 1 },
+  { label: "Good", color: "bg-info", minScore: 2 },
+  { label: "Strong", color: "bg-success", minScore: 3 },
 ];
 
 function PasswordStrength({ password }: { password: string }) {
@@ -72,10 +73,14 @@ function PasswordStrength({ password }: { password: string }) {
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) s++;
     if (/\d/.test(password)) s++;
     if (/[@$!%*?&]/.test(password)) s++;
-    return s;
+    return Math.min(s, 3);
   }, [password]);
 
-  const strength = strengthConfig.find((c) => c.minScore === score) || strengthConfig[score];
+  // Find the strength object based on the score
+  const strength = strengthConfig.find((c) => c.minScore === score);
+
+  // If no match found (shouldn't happen with scores 0-4), use a default
+  const activeStrength = strength || { label: "Weak", color: "bg-error" };
 
   return (
     <div className="space-y-1">
@@ -84,20 +89,26 @@ function PasswordStrength({ password }: { password: string }) {
           <motion.div
             key={i}
             initial={{ width: 0 }}
-            animate={{ width: i < score ? '25%' : '25%', opacity: i < score ? 1 : 0.2 }}
+            animate={{ width: "25%", opacity: i < score ? 1 : 0.2 }}
             className={`h-1 rounded-full transition-all duration-300 ${
-              i < score ? strength.color : 'bg-base-300'
+              i < score ? activeStrength.color : "bg-base-300"
             }`}
           />
         ))}
       </div>
       {password.length > 0 && (
         <p className="text-xs text-base-content/60">
-          Password strength:{' '}
-          <span className={`font-medium ${
-            score <= 1 ? 'text-error' : score === 2 ? 'text-warning' : 'text-success'
-          }`}>
-            {strength.label}
+          Password strength:{" "}
+          <span
+            className={`font-medium ${
+              score <= 1
+                ? "text-error"
+                : score === 2
+                  ? "text-warning"
+                  : "text-success"
+            }`}
+          >
+            {activeStrength.label}
           </span>
         </p>
       )}
@@ -105,11 +116,17 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-const PasswordRequirement = ({ met, label }: { met: boolean; label: string }) => (
+const PasswordRequirement = ({
+  met,
+  label,
+}: {
+  met: boolean;
+  label: string;
+}) => (
   <motion.li
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
-    className={`flex items-center gap-2 text-xs ${met ? 'text-success' : 'text-base-content/40'}`}
+    className={`flex items-center gap-2 text-xs ${met ? "text-success" : "text-base-content/40"}`}
   >
     {met ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
     {label}
@@ -130,26 +147,32 @@ export default function RegisterPage() {
     formState: { errors, isValid },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    mode: 'onChange',
+    mode: "onChange",
     defaultValues: { acceptTerms: false as unknown as true },
   });
 
-  const watchPassword = watch('password');
+  const watchPassword = watch("password");
 
   const passwordReqs = useMemo(
     () => [
-      { met: (watchPassword?.length ?? 0) >= 8, label: 'At least 8 characters' },
-      { met: /[a-z]/.test(watchPassword || ''), label: 'One lowercase letter' },
-      { met: /[A-Z]/.test(watchPassword || ''), label: 'One uppercase letter' },
-      { met: /\d/.test(watchPassword || ''), label: 'One number' },
-      { met: /[@$!%*?&]/.test(watchPassword || ''), label: 'One special character' },
+      {
+        met: (watchPassword?.length ?? 0) >= 8,
+        label: "At least 8 characters",
+      },
+      { met: /[a-z]/.test(watchPassword || ""), label: "One lowercase letter" },
+      { met: /[A-Z]/.test(watchPassword || ""), label: "One uppercase letter" },
+      { met: /\d/.test(watchPassword || ""), label: "One number" },
+      {
+        met: /[@$!%*?&]/.test(watchPassword || ""),
+        label: "One special character",
+      },
     ],
     [watchPassword],
   );
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/app');
+      router.replace("/app");
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -189,7 +212,10 @@ export default function RegisterPage() {
       </div>
 
       <div className="absolute top-4 left-4 z-10">
-        <Link href="/" className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+        <Link
+          href="/"
+          className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+        >
           <Image
             src="/whisper-responsive/icons8-chat-64.svg"
             alt="Whisper"
@@ -215,7 +241,7 @@ export default function RegisterPage() {
           >
             <motion.div
               animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               className="inline-block mb-4"
             >
               <Image
@@ -247,9 +273,9 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="johndoe"
                   autoComplete="username"
-                  {...register('username')}
-                  className={`input input-bordered w-full pl-10 ${
-                    errors.username ? 'input-error' : ''
+                  {...register("username")}
+                  className={`input outline-none w-full pl-10 ${
+                    errors.username ? "input-error" : ""
                   }`}
                 />
               </div>
@@ -281,9 +307,9 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="you@example.com"
                   autoComplete="email"
-                  {...register('email')}
-                  className={`input input-bordered w-full pl-10 ${
-                    errors.email ? 'input-error' : ''
+                  {...register("email")}
+                  className={`input outline-none w-full pl-10 ${
+                    errors.email ? "input-error" : ""
                   }`}
                 />
               </div>
@@ -312,12 +338,12 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   autoComplete="new-password"
-                  {...register('password')}
-                  className={`input input-bordered w-full pl-10 pr-10 ${
-                    errors.password ? 'input-error' : ''
+                  {...register("password")}
+                  className={`input outline-none w-full pl-10 pr-10 ${
+                    errors.password ? "input-error" : ""
                   }`}
                 />
                 <button
@@ -325,15 +351,23 @@ export default function RegisterPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/70 transition-colors"
                   tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
-              <PasswordStrength password={watchPassword || ''} />
+              <PasswordStrength password={watchPassword || ""} />
               <ul className="mt-2 space-y-1">
                 {passwordReqs.map((req, i) => (
-                  <PasswordRequirement key={i} met={req.met} label={req.label} />
+                  <PasswordRequirement
+                    key={i}
+                    met={req.met}
+                    label={req.label}
+                  />
                 ))}
               </ul>
               <AnimatePresence>
@@ -361,12 +395,12 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
                   autoComplete="new-password"
-                  {...register('confirmPassword')}
-                  className={`input input-bordered w-full pl-10 pr-10 ${
-                    errors.confirmPassword ? 'input-error' : ''
+                  {...register("confirmPassword")}
+                  className={`input outline-none w-full pl-10 pr-10 ${
+                    errors.confirmPassword ? "input-error" : ""
                   }`}
                 />
                 <button
@@ -374,7 +408,9 @@ export default function RegisterPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content/70 transition-colors"
                   tabIndex={-1}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -405,16 +441,19 @@ export default function RegisterPage() {
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  {...register('acceptTerms')}
+                  {...register("acceptTerms")}
                   className="checkbox checkbox-primary checkbox-xs mt-0.5"
                 />
                 <span className="text-xs text-base-content/60">
-                  I agree to the{' '}
+                  I agree to the{" "}
                   <Link href="/terms" className="text-primary hover:underline">
                     Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" className="text-primary hover:underline">
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-primary hover:underline"
+                  >
                     Privacy Policy
                   </Link>
                 </span>
@@ -448,7 +487,9 @@ export default function RegisterPage() {
                 ) : (
                   <UserPlus className="w-4 h-4" />
                 )}
-                {registerMutation.isPending ? 'Creating account...' : 'Create account'}
+                {registerMutation.isPending
+                  ? "Creating account..."
+                  : "Create account"}
               </button>
             </motion.div>
           </form>
@@ -460,7 +501,7 @@ export default function RegisterPage() {
             className="mt-6 text-center"
           >
             <p className="text-sm text-base-content/60">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Link
                 href="/login"
                 className="text-primary font-medium hover:underline inline-flex items-center gap-1"

@@ -203,11 +203,16 @@ export function useSocket() {
             ? data.content.substring(0, 100)
             : `[${data.type}]`;
 
-        const result = moveConversationToTop(old, data.conversationId, (c) => ({
-          ...c,
-          lastMessage: preview,
-          lastMessageAt: newLastMessageAt,
-        }));
+        const result = moveConversationToTop(old, data.conversationId, (c) => {
+          const updated = {
+            ...c,
+            lastMessage: c.type === 'group'
+              ? `${data.senderUsername}: ${preview}`
+              : preview,
+            lastMessageAt: newLastMessageAt,
+          };
+          return updated;
+        });
 
         return result;
       });
@@ -348,7 +353,7 @@ export function useSocket() {
     });
 
     registerEvent("user:offline", (data) => {
-      setOffline(data.userId);
+      setOffline(data.userId, data.lastSeen);
 
       queryClient.setQueryData<InfiniteData<{ conversations: Conversation[] }>>(
         ["conversations"],
@@ -475,7 +480,18 @@ export function useSocket() {
     });
 
     registerEvent("notification:new", (data) => {
-      const notification = data as unknown as Notification;
+      const payload = data as Record<string, unknown>;
+      const notification: Notification = {
+        _id: (payload._id as string) || (payload.id as string) || '',
+        userId: '',
+        type: (payload.type as Notification['type']) || 'system',
+        message: (payload.message as string) || '',
+        relatedConversation: payload.relatedConversation as string | undefined,
+        isRead: (payload.isRead as boolean) || false,
+        createdAt: (payload.createdAt as string) || new Date().toISOString(),
+        updatedAt: (payload.createdAt as string) || new Date().toISOString(),
+      };
+
       queryClient.setQueryData<
         InfiniteData<{ notifications: Notification[] }>
       >(["notifications"], (old) => {
@@ -496,9 +512,8 @@ export function useSocket() {
       });
       incrementUnread();
 
-      const n = notification as unknown as { message?: string; type?: string };
-      if (n?.message && n?.type) {
-        toast.info(n.message, {
+      if (notification.message) {
+        toast.info(notification.message, {
           duration: 4000,
           position: "top-right",
         });

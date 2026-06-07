@@ -205,7 +205,7 @@ export class ChatGateway
 
     await this.messageModel.updateOne(
       { _id: payload.messageId },
-      { $addToSet: { readBy: userId } },
+      { $addToSet: { deliveredTo: userId } },
     );
 
     client.to(`conversation:${payload.conversationId}`).emit('message:read', {

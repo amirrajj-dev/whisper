@@ -227,6 +227,8 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
     );
   }
 
+  console.log(isBlocked);
+
   return (
     <>
       <motion.div

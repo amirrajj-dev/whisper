@@ -234,7 +234,7 @@ export class ChatService {
 
       const conversation = await this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
+        .populate('participants', 'username email avatarUrl bio lastSeen')
         .populate('createdBy', 'username email avatarUrl')
         .populate('lastMessage')
         .exec();
@@ -1245,6 +1245,45 @@ export class ChatService {
     } catch (error) {
       this.logger.error(
         `Error deleting conversation: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  }
+
+  async getUnreadCounts(userId: string): Promise<Record<string, number>> {
+    try {
+      const conversations = await this.conversationModel
+        .find({ participants: userId })
+        .select('_id')
+        .lean();
+
+      const conversationIds = conversations.map((c) => c._id.toString());
+
+      const counts = await this.messageModel.aggregate([
+        {
+          $match: {
+            conversationId: {
+              $in: conversationIds.map((id) => new mongoose.Types.ObjectId(id)),
+            },
+            senderId: { $ne: new mongoose.Types.ObjectId(userId) },
+            deliveredTo: { $ne: new mongoose.Types.ObjectId(userId) },
+          },
+        },
+        { $group: { _id: '$conversationId', count: { $sum: 1 } } },
+      ]);
+
+      const result: Record<string, number> = {};
+      for (const id of conversationIds) {
+        result[id] = 0;
+      }
+      for (const c of counts) {
+        result[c._id.toString()] = c.count;
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Error getting unread counts: ${error instanceof Error ? error.message : error}`,
       );
       throw error;
     }

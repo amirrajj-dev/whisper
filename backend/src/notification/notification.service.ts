@@ -37,11 +37,12 @@ export class NotificationService {
       this.eventEmitter.emit(NotificationEvents.NOTIFICATION_CREATED, {
         userId: data.userId,
         notification: {
-          id: notification._id,
+          _id: notification._id,
           type: notification.type,
           message: notification.message,
           relatedConversation: notification.relatedConversation,
           createdAt: notification.createdAt,
+          isRead: false,
         },
       });
 

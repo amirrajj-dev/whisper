@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MessageSquare, Users, Hash, Command, ArrowRight, Loader2, X } from 'lucide-react';
 import { useConversations } from '@/src/hooks/use-chat';
+import { useAuthStore } from '@/src/stores/auth.store';
 import { useChatStore } from '@/src/stores/chat.store';
 import { UserAvatar } from '@/src/components/common/user-avatar';
 import { useMediaQuery } from '@/src/hooks/use-media-query';
@@ -22,6 +23,7 @@ export function CommandPalette({ isOpen, onClose, onSelectConversation }: Comman
   const inputRef = useRef<HTMLInputElement>(null);
   const { data } = useConversations();
   const { setActiveConversation } = useChatStore();
+  const currentUser = useAuthStore((s) => s.user);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const conversations: Conversation[] = data?.pages?.flatMap((p: any) => p.conversations) || [];
@@ -141,13 +143,24 @@ export function CommandPalette({ isOpen, onClose, onSelectConversation }: Comman
                     }`}
                   >
                     <UserAvatar
-                      src={conv.avatarUrl || undefined}
+                      src={(() => {
+                        if (conv.avatarUrl) return conv.avatarUrl;
+                        if (conv.type !== 'group') {
+                          const other = (conv.participants as PopulatedUser[])?.find((p) => p._id !== currentUser?._id);
+                          return other?.avatarUrl || undefined;
+                        }
+                        return undefined;
+                      })()}
                       alt={conv.name || 'Conversation'}
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {conv.name || (conv.participants as PopulatedUser[])?.[0]?.username || 'Unknown'}
+                        {(() => {
+                          if (conv.name) return conv.name;
+                          const other = (conv.participants as PopulatedUser[])?.find((p) => p._id !== currentUser?._id);
+                          return other?.username || (conv.participants as PopulatedUser[])?.[0]?.username || 'Unknown';
+                        })()}
                       </p>
                       {conv.lastMessage && (
                         <p className="text-xs text-base-content/40 truncate">{conv.lastMessage}</p>

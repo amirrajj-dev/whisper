@@ -60,7 +60,11 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-base-content/40" />
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 rounded-2xl bg-base-200 flex items-center justify-center mb-4">
               <Inbox className="w-8 h-8 text-base-content/40" />

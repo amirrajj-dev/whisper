@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/src/components/common/user-avatar';
 import { UserProfileModal } from '@/src/components/chat/user-profile-modal';
 import { useCurrentUser } from '@/src/hooks/use-auth';
-import { useAddParticipants, useRemoveParticipant, usePromoteToAdmin, useDemoteFromAdmin, useTransferOwnership, useDeleteConversation } from '@/src/hooks/use-chat';
+import { useAddParticipants, useRemoveParticipant, usePromoteToAdmin, useDemoteFromAdmin, useTransferOwnership, useDeleteConversation, useUpdateConversation } from '@/src/hooks/use-chat';
 import { usePresenceStore } from '@/src/stores/presence.store';
 import { userApi } from '@/src/services/user.api';
 import { formatDistanceToNow } from 'date-fns';
@@ -193,11 +193,15 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const deleteConversation = useDeleteConversation();
   const removeParticipant = useRemoveParticipant();
   const promoteToAdmin = usePromoteToAdmin();
   const demoteFromAdmin = useDemoteFromAdmin();
   const transferOwnership = useTransferOwnership();
+  const updateConversation = useUpdateConversation();
 
   const currentUserRole = useMemo(() => {
     if (!conversation || !currentUser) return 'member' as Role;
@@ -343,11 +347,37 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
                   transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
                 >
                   <div className="relative">
-                    <UserAvatar
-                      src={conversation.avatarUrl || null}
-                      alt={conversation.name || 'Group'}
-                      size="xl"
-                    />
+                    <label className={`cursor-pointer ${currentUserRole === 'owner' ? 'group' : ''}`}>
+                      <UserAvatar
+                        src={avatarFile ? URL.createObjectURL(avatarFile) : (conversation.avatarUrl || null)}
+                        alt={conversation.name || 'Group'}
+                        size="xl"
+                      />
+                      {currentUserRole === 'owner' && (
+                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && conversation) {
+                            setAvatarFile(file);
+                            updateConversation.mutate(
+                              { id: conversation._id, data: {}, avatarFile: file },
+                              { onSuccess: () => setAvatarFile(null) },
+                            );
+                          }
+                        }}
+                        disabled={currentUserRole !== 'owner'}
+                      />
+                    </label>
                     <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center border-2 border-base-100">
                       <Users className="w-2.5 h-2.5 text-primary-content" />
                     </div>
@@ -360,7 +390,50 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
                   transition={{ delay: 0.15 }}
                   className="text-center mt-4"
                 >
-                  <h2 className="text-xl font-bold">{conversation.name || 'Group'}</h2>
+                  {editingName ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!nameInput.trim() || !conversation) return;
+                        updateConversation.mutate(
+                          { id: conversation._id, data: { name: nameInput.trim() } },
+                          { onSuccess: () => setEditingName(false) },
+                        );
+                      }}
+                      className="flex items-center gap-2 justify-center"
+                    >
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="input input-bordered input-sm text-center text-sm"
+                        autoFocus
+                        maxLength={100}
+                      />
+                      <button type="submit" className="btn btn-primary btn-sm" disabled={updateConversation.isPending}>
+                        {updateConversation.isPending ? <span className="loading loading-spinner loading-xs" /> : 'Save'}
+                      </button>
+                      <button type="button" onClick={() => setEditingName(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <h2 className="text-xl font-bold">{conversation.name || 'Group'}</h2>
+                      {(currentUserRole === 'owner' || currentUserRole === 'admin') && (
+                        <button
+                          onClick={() => {
+                            setNameInput(conversation.name || '');
+                            setEditingName(true);
+                          }}
+                          className="btn btn-ghost btn-xs btn-square text-base-content/40"
+                          title="Edit name"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-center gap-1.5 mt-1">
                     <Users className="w-3.5 h-3.5 text-base-content/40" />
                     <span className="text-xs text-base-content/50">

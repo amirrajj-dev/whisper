@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 import { gatewayApi } from '@/src/services/gateway.api';
 
+interface LastSeenMap {
+  [userId: string]: string;
+}
+
 interface PresenceState {
   onlineUsers: Set<string>;
+  lastSeen: LastSeenMap;
   isOnline: (userId: string) => boolean;
+  getLastSeen: (userId: string) => string | null;
   setOnline: (userId: string) => void;
-  setOffline: (userId: string) => void;
+  setOffline: (userId: string, lastSeen?: string) => void;
   setBatchOnline: (userIds: string[]) => void;
   fetchAndSetOnline: (userIds: string[]) => Promise<void>;
   reset: () => void;
@@ -13,8 +19,11 @@ interface PresenceState {
 
 export const usePresenceStore = create<PresenceState>((set, get) => ({
   onlineUsers: new Set<string>(),
+  lastSeen: {},
 
   isOnline: (userId: string) => get().onlineUsers.has(userId),
+
+  getLastSeen: (userId: string) => get().lastSeen[userId] || null,
 
   setOnline: (userId: string) =>
     set((state) => {
@@ -23,11 +32,14 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
       return { onlineUsers: next };
     }),
 
-  setOffline: (userId: string) =>
+  setOffline: (userId: string, lastSeen?: string) =>
     set((state) => {
       const next = new Set(state.onlineUsers);
       next.delete(userId);
-      return { onlineUsers: next };
+      return {
+        onlineUsers: next,
+        lastSeen: lastSeen ? { ...state.lastSeen, [userId]: lastSeen } : state.lastSeen,
+      };
     }),
 
   setBatchOnline: (userIds: string[]) =>
@@ -43,13 +55,11 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
     if (userIds.length === 0) return;
     try {
       const res = await gatewayApi.checkOnlineBatch(userIds);
-      const onlineIds = Object.entries(res.status)
-        .filter(([, online]) => online)
-        .map(([id]) => id);
       set((state) => {
         const next = new Set(state.onlineUsers);
-        for (const id of onlineIds) {
-          next.add(id);
+        for (const [id, online] of Object.entries(res.status)) {
+          if (online) next.add(id);
+          else next.delete(id);
         }
         return { onlineUsers: next };
       });
@@ -58,5 +68,5 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
     }
   },
 
-  reset: () => set({ onlineUsers: new Set() }),
+  reset: () => set({ onlineUsers: new Set(), lastSeen: {} }),
 }));

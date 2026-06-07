@@ -67,10 +67,12 @@ class SocketManager {
   }
 
   reconnect(): void {
-    const rooms = new Set(this.joinedRooms);
-    this.disconnect();
-    this.joinedRooms = rooms;
-    this.connect();
+    if (this.socket) {
+      this.socket.connect();
+      this.rejoinRooms();
+    } else {
+      this.connect();
+    }
   }
 
   onReconnect(cb: () => void): () => void {
@@ -109,12 +111,12 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
     }
-    this.onReconnectCallbacks = [];
-    this.onAuthErrorCallbacks = [];
   }
 
   fullCleanup(): void {
     this.joinedRooms.clear();
+    this.onReconnectCallbacks = [];
+    this.onAuthErrorCallbacks = [];
     this.disconnect();
   }
 

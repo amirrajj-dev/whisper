@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useConversations } from '@/src/hooks/use-chat';
+import { useEffect, useMemo } from 'react';
+import { useConversations, useMessageUnreadCounts } from '@/src/hooks/use-chat';
 import { ConversationItem } from '@/src/components/chat/conversation-item';
 import { ConversationSkeleton } from '@/src/components/common/loading-skeleton';
 import { useChatStore } from '@/src/stores/chat.store';
@@ -16,7 +16,14 @@ interface ConversationListProps {
 
 export function ConversationList({ onSelectConversation }: ConversationListProps) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isError, refetch } = useConversations();
-  const { activeConversationId, conversationsSearch, setConversationsSearch } = useChatStore();
+  const { activeConversationId, conversationsSearch, setConversationsSearch, setUnreadCounts } = useChatStore();
+  const unreadCountsQuery = useMessageUnreadCounts();
+
+  useEffect(() => {
+    if (unreadCountsQuery.data) {
+      setUnreadCounts(unreadCountsQuery.data);
+    }
+  }, [unreadCountsQuery.data, setUnreadCounts]);
 
   const conversations = useMemo(() => {
     if (!data?.pages) return [];

@@ -135,6 +135,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
     if (file) {
       if (file.type.startsWith('image/')) type = 'image';
       else if (file.type.startsWith('video/')) type = 'video';
+      else if (file.type.startsWith('audio/')) type = 'voice';
       else type = 'file';
     }
 

@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification } from '@/src/hooks/use-notifications';
 import { NotificationItem } from './notification-item';
-import { Bell, CheckCheck, Loader2, Inbox } from 'lucide-react';
+import { Bell, CheckCheck, Loader2, Inbox, AlertCircle } from 'lucide-react';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface NotificationDrawerProps {
 }
 
 export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useNotifications();
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useNotifications();
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
   const deleteNotification = useDeleteNotification();
@@ -56,7 +56,20 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {isLoading ? (
+              {isError ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center mb-3">
+                    <AlertCircle className="w-6 h-6 text-error" />
+                  </div>
+                  <p className="text-sm font-medium">Failed to load notifications</p>
+                  <p className="text-xs text-base-content/40 mt-1 mb-3">
+                    Something went wrong. Please try again.
+                  </p>
+                  <button onClick={() => refetch()} className="btn btn-primary btn-xs">
+                    Try again
+                  </button>
+                </div>
+              ) : isLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-base-content/40" />
                 </div>

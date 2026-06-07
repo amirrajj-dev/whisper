@@ -100,7 +100,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden opacity-60">
+          <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden">
             <div className="p-4 border-b border-base-300 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-info/10 flex items-center justify-center">
                 <Bell className="w-4 h-4 text-info" />
@@ -131,7 +131,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden opacity-60">
+          <div className="bg-base-100 rounded-2xl border border-base-300 overflow-hidden">
             <div className="p-4 border-b border-base-300 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-base-200 flex items-center justify-center">
                 <Shield className="w-4 h-4 text-base-content/60" />

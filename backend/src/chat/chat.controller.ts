@@ -45,6 +45,16 @@ import {
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @Get('unread-counts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get per-conversation unread message counts' })
+  @ApiResponse({ status: 200, description: 'Unread counts per conversation' })
+  async getUnreadCounts(
+    @CurrentUser() user: Omit<User, 'password'>,
+  ) {
+    return this.chatService.getUnreadCounts(user._id);
+  }
+
   @Get('conversations')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get user conversations (paginated)' })

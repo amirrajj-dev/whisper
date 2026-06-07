@@ -146,7 +146,7 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   {...register('email')}
-                  className={`input input-bordered w-full pl-10 ${
+                  className={`input outline-none w-full pl-10 ${
                     errors.email ? 'input-error' : ''
                   }`}
                 />
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   {...register('password')}
-                  className={`input input-bordered w-full pl-10 pr-10 ${
+                  className={`input outline-none w-full pl-10 pr-10 ${
                     errors.password ? 'input-error' : ''
                   }`}
                 />

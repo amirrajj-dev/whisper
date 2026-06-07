@@ -26,8 +26,8 @@ export function useUnreadCount() {
   const query = useQuery({
     queryKey: ['unread-count'],
     queryFn: () => notificationApi.getUnreadCount(),
-    staleTime: 10 * 1000,
-    refetchInterval: 30 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: false,
   });
 
   useEffect(() => {

@@ -13,6 +13,9 @@ import type {
 import type { PaginationDto } from '@/src/types/dto/pagination';
 
 export const chatApi = {
+  getUnreadCounts: () =>
+    api.get<Record<string, number>>('/chat/unread-counts').then((r) => r.data),
+
   getConversations: (params?: PaginationDto) =>
     api.get<ConversationListResponse>('/chat/conversations', { params }).then((r) => r.data),
 

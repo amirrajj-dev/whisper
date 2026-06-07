@@ -4,7 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { chatApi } from '@/src/services/chat.api';
 import { useChatStore } from '@/src/stores/chat.store';
 import { toast } from 'sonner';
-import type { CreateConversationDto, SendMessageDto, EditMessageDto } from '@/src/types/dto/chat';
+import type { CreateConversationDto, SendMessageDto, EditMessageDto, UpdateConversationDto } from '@/src/types/dto/chat';
 import type { Message } from '@/src/types/entities/message';
 import type { Conversation } from '@/src/types/entities/conversation';
 import type { InfiniteData } from '@tanstack/react-query';
@@ -279,6 +279,36 @@ export function useTransferOwnership() {
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to transfer ownership');
     },
+  });
+}
+
+export function useUpdateConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data, avatarFile }: { id: string; data: UpdateConversationDto; avatarFile?: File }) =>
+      chatApi.updateConversation(id, data, avatarFile),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      toast.success('Conversation updated');
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message || 'Failed to update conversation');
+    },
+  });
+}
+
+export function useMessageUnreadCounts() {
+  const queryClient = useQueryClient();
+  const { setUnreadCounts } = useChatStore();
+
+  return useQuery({
+    queryKey: ['message-unread-counts'],
+    queryFn: () => chatApi.getUnreadCounts(),
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
