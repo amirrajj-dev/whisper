@@ -31,9 +31,10 @@ import type { MessageType } from '@/src/types/entities/message';
 
 interface MessageComposerProps {
   conversationId: string;
+  onMessageSent?: () => void;
 }
 
-export function MessageComposer({ conversationId }: MessageComposerProps) {
+export function MessageComposer({ conversationId, onMessageSent }: MessageComposerProps) {
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -253,6 +254,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
             socketManager.stopTyping(conversationId);
             if (user) removeTypingUser(conversationId, user._id);
             requestAnimationFrame(() => textareaRef.current?.focus());
+            onMessageSent?.();
           },
         },
       );
@@ -286,10 +288,11 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
           socketManager.stopTyping(conversationId);
           if (user) removeTypingUser(conversationId, user._id);
           requestAnimationFrame(() => textareaRef.current?.focus());
+          onMessageSent?.();
         },
       },
     );
-  }, [content, file, conversationId, replyingTo, sendMutation, editMutation, isEditing, editingMessage, setReplyingTo, setEditingMessage, user, removeTypingUser]);
+  }, [content, file, conversationId, replyingTo, sendMutation, editMutation, isEditing, editingMessage, setReplyingTo, setEditingMessage, user, removeTypingUser, onMessageSent]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

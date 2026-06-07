@@ -36,10 +36,11 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const deleteMessage = useDeleteMessage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isNearBottom = useRef(true);
 
   const allMessages = useMemo(() => {
     if (!messagesData?.pages) return [];
-    return messagesData.pages.flatMap((p) => p.messages);
+    return [...messagesData.pages].reverse().flatMap((p) => p.messages);
   }, [messagesData]);
 
   useEffect(() => {
@@ -81,7 +82,9 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    if (isNearBottom.current) {
+      scrollToBottom();
+    }
   }, [allMessages.length, scrollToBottom]);
 
   const latestMessageId = useMemo(() => {
@@ -108,6 +111,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
+    isNearBottom.current = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     if (container.scrollTop === 0 && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
@@ -147,7 +151,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
 
         <div className="py-2">
           {groupedMessages.map((group) => (
-            <div key={group.date}>
+            <div key={group.messages[0]._id}>
               <DateSeparator date={group.date} />
               {group.messages.map((msg, idx) => {
                 const prevMsg = idx > 0 ? group.messages[idx - 1] : undefined;
@@ -192,7 +196,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         {/* <TypingIndicator conversationId={conversationId} /> */}
       </div>
 
-      <MessageComposer conversationId={conversationId} />
+      <MessageComposer conversationId={conversationId} onMessageSent={scrollToBottom} />
     </div>
   );
 }
