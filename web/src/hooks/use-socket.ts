@@ -496,6 +496,7 @@ export function useSocket() {
       const conversationsData = resultItem?.data;
 
       if (user) {
+        setOnline(user._id);
         const otherIds = getOtherParticipantIds(conversationsData, user._id);
         if (otherIds.length > 0) {
           await fetchAndSetOnline(otherIds);

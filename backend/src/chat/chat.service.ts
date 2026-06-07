@@ -467,6 +467,7 @@ export class ChatService {
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ADDED, {
         conversationId,
+        conversationName: conversation.name || 'Group',
         newParticipants: newUserIds,
         addedBy: currentUserId,
       });
@@ -553,6 +554,7 @@ export class ChatService {
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ROLE_CHANGED, {
         conversationId,
+        conversationName: conversation.name || 'Group',
         targetUserId,
         isPromotion: true,
         promotedBy: currentUserId,
@@ -635,6 +637,7 @@ export class ChatService {
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ROLE_CHANGED, {
         conversationId,
+        conversationName: conversation.name || 'Group',
         targetUserId,
         isPromotion: false,
         demotedBy: currentUserId,
@@ -712,6 +715,7 @@ export class ChatService {
 
       this.eventEmitter.emit(ChatEvents.OWNERSHIP_TRANSFERRED, {
         conversationId,
+        conversationName: conversation.name || 'Group',
         newOwnerId,
         previousOwnerId: currentUserId,
       });
@@ -1023,6 +1027,7 @@ export class ChatService {
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_REMOVED, {
         conversationId,
+        conversationName: conversation.name || 'Group',
         removedUserId: targetUserId,
         removedBy: currentUserId,
       });

@@ -216,7 +216,9 @@ export function useAddParticipants() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      toast.success('Participants added');
+      const conv = queryClient.getQueryData<Conversation>(['conversation', variables.conversationId]);
+      const name = conv?.name || 'Group';
+      toast.success(`Participants added to "${name}"`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to add participants');
@@ -233,7 +235,9 @@ export function useRemoveParticipant() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      toast.success('Participant removed');
+      const conv = queryClient.getQueryData<Conversation>(['conversation', variables.conversationId]);
+      const name = conv?.name || 'Group';
+      toast.success(`Participant removed from "${name}"`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to remove participant');
@@ -250,7 +254,9 @@ export function usePromoteToAdmin() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      toast.success('User promoted to admin');
+      const conv = queryClient.getQueryData<Conversation>(['conversation', variables.conversationId]);
+      const name = conv?.name || 'Group';
+      toast.success(`User promoted to admin in "${name}"`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to promote user');
@@ -267,7 +273,9 @@ export function useDemoteFromAdmin() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      toast.success('User demoted from admin');
+      const conv = queryClient.getQueryData<Conversation>(['conversation', variables.conversationId]);
+      const name = conv?.name || 'Group';
+      toast.success(`User demoted from admin in "${name}"`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to demote user');
@@ -284,7 +292,9 @@ export function useTransferOwnership() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      toast.success('Ownership transferred');
+      const conv = queryClient.getQueryData<Conversation>(['conversation', variables.conversationId]);
+      const name = conv?.name || 'Group';
+      toast.success(`Ownership transferred in "${name}"`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to transfer ownership');
@@ -329,6 +339,8 @@ export function useDeleteConversation() {
   return useMutation({
     mutationFn: (conversationId: string) => chatApi.deleteConversation(conversationId),
     onSuccess: (_data, conversationId) => {
+      const conv = queryClient.getQueryData<Conversation>(['conversation', conversationId]);
+      const name = conv?.name || 'Group';
       queryClient.setQueryData<InfiniteData<{ conversations: Conversation[] }>>(
         ['conversations'],
         (old) => {
@@ -347,7 +359,7 @@ export function useDeleteConversation() {
       }
       queryClient.removeQueries({ queryKey: ['conversation', conversationId] });
       queryClient.removeQueries({ queryKey: ['messages', conversationId] });
-      toast.success('Group deleted');
+      toast.success(`"${name}" deleted`);
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to delete conversation');
