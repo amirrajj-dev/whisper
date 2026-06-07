@@ -263,7 +263,6 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     if (!conversation) return;
     try {
       await deleteConversation.mutateAsync(conversation._id);
-      toast.success('Group deleted');
       setShowDeleteConfirm(false);
       onClose();
     } catch {

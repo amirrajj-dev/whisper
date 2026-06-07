@@ -6,7 +6,7 @@ import type { PopulatedUser } from "@/src/types/entities/user";
 import { useCurrentUser } from "@/src/hooks/use-auth";
 import { UserAvatar } from "@/src/components/common/user-avatar";
 import { format } from "date-fns";
-import { FileText, Reply, Edit3, Trash2 } from "lucide-react";
+import { FileText, Reply, Edit3, Trash2, Download, Film, Mic, Play } from "lucide-react";
 import { useState } from "react";
 
 interface MessageBubbleProps {
@@ -58,6 +58,28 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
   );
 }
 
+function getFileNameFromUrl(url: string): string {
+  try {
+    const parts = url.split("/");
+    const last = parts[parts.length - 1] || "file";
+    return decodeURIComponent(last.split("?")[0] || last);
+  } catch {
+    return "file";
+  }
+}
+
+function getFileExtension(filename: string): string {
+  const dot = filename.lastIndexOf(".");
+  return dot > 0 ? filename.slice(dot + 1).toUpperCase() : "";
+}
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function MessageContent({ message, searchQuery }: { message: Message; searchQuery?: string }) {
   if (message.deleted) {
     return (
@@ -81,32 +103,66 @@ function MessageContent({ message, searchQuery }: { message: Message; searchQuer
       );
     case "video":
       return (
-        <video
-          src={message.content}
-          controls
-          className="max-w-[280px] rounded-lg"
-          preload="metadata"
-        />
+        <div className="max-w-[280px] rounded-lg overflow-hidden bg-base-300/50">
+          <div className="relative">
+            <video
+              src={message.content}
+              controls
+              className="w-full aspect-video"
+              preload="metadata"
+            >
+              <source src={message.content} type="video/mp4" />
+            </video>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 text-xs text-base-content/60">
+            <Film className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Video</span>
+          </div>
+        </div>
       );
     case "voice":
       return (
-        <audio
-          src={message.content}
-          controls
-          className="max-w-[220px] h-10"
-          preload="none"
-        />
+        <div className="max-w-[260px] rounded-lg overflow-hidden bg-base-300/50">
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Mic className="w-4 h-4 text-primary" />
+            </div>
+            <audio
+              src={message.content}
+              controls
+              className="flex-1 h-8 min-w-[140px]"
+              preload="metadata"
+              controlsList="nodownload"
+            >
+              <source src={message.content} type="audio/mpeg" />
+              <source src={message.content} type="audio/ogg" />
+              <source src={message.content} type="audio/wav" />
+            </audio>
+          </div>
+        </div>
       );
     case "file":
+      const fileName = getFileNameFromUrl(message.content);
+      const fileExt = getFileExtension(fileName);
       return (
         <a
           href={message.content}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm bg-base-300/50 rounded-lg p-2 hover:bg-base-300 transition-colors"
+          download={fileName}
+          className="flex items-center gap-3 text-sm bg-base-300/50 rounded-lg p-3 hover:bg-base-300 transition-colors group max-w-[280px]"
         >
-          <FileText className="w-4 h-4 shrink-0" />
-          <span className="truncate">Download file</span>
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{fileName}</p>
+            <p className="text-xs text-base-content/40">
+              {fileExt ? `${fileExt} file` : "File"}
+              {message.publicId ? " \u00B7 Click to download" : ""}
+            </p>
+          </div>
+          <Download className="w-4 h-4 text-base-content/30 group-hover:text-primary transition-colors shrink-0" />
         </a>
       );
     default:

@@ -102,9 +102,7 @@ export function ConversationItem({
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-base-content/60 truncate">
-            {isOnline ? (
-              <span className="text-success font-medium">Online</span>
-            ) : conversation.lastMessage ? (
+            {conversation.lastMessage ? (
               conversation.lastMessage
             ) : (
               <span className="text-base-content/30 italic">No messages yet</span>

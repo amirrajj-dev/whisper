@@ -16,8 +16,11 @@ import type {
   MessageReadPayload,
   ConversationUpdatedPayload,
   ConversationDeletedPayload,
+  ConversationNewPayload,
   OwnershipTransferredPayload,
+  ParticipantAddedPayload,
   ParticipantRemovedPayload,
+  ParticipantRoleChangedPayload,
 } from "@/src/types/socket/events";
 import type { Message } from "@/src/types/entities/message";
 import type { Conversation } from "@/src/types/entities/conversation";
@@ -393,7 +396,8 @@ export function useSocket() {
       }
     });
 
-    registerEvent("conversation:new", () => {
+    registerEvent("conversation:new", (data: ConversationNewPayload) => {
+      socketManager.joinConversation(data.conversationId);
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     });
 
@@ -443,8 +447,11 @@ export function useSocket() {
       },
     );
 
-    registerEvent("participant:added", () => {
+    registerEvent("participant:added", (data: ParticipantAddedPayload) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["conversation", data.conversationId],
+      });
     });
 
     registerEvent("participant:removed", (data: ParticipantRemovedPayload) => {
@@ -459,14 +466,23 @@ export function useSocket() {
         ) {
           useChatStore.getState().setActiveConversation(null);
         }
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: ["conversation", data.conversationId],
+        });
       }
     });
 
-    registerEvent("participant:role_changed", () => {
+    registerEvent("participant:role_changed", (data: ParticipantRoleChangedPayload) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["conversation", data.conversationId],
+      });
     });
 
-    registerEvent("connected", () => {
+    registerEvent("connected", async () => {
+      // Refresh conversations to get fresh lastSeen data
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
       const conversationsData = queryClient.getQueryData<
         InfiniteData<{ conversations: Conversation[] }>
       >(["conversations"]);
@@ -474,7 +490,14 @@ export function useSocket() {
       if (user) {
         const otherIds = getOtherParticipantIds(conversationsData, user._id);
         if (otherIds.length > 0) {
-          fetchAndSetOnline(otherIds);
+          await fetchAndSetOnline(otherIds);
+        }
+        // Refresh presence for the active conversation if any
+        const activeId = useChatStore.getState().activeConversationId;
+        if (activeId) {
+          queryClient.invalidateQueries({
+            queryKey: ["conversation", activeId],
+          });
         }
       }
     });

@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '@/src/stores/chat.store';
 import { usePresenceStore } from '@/src/stores/presence.store';
 import { userApi } from '@/src/services/user.api';
+import { useAuthStore } from '@/src/stores/auth.store';
 import { toast } from 'sonner';
 
 interface ChatHeaderProps {
@@ -144,11 +145,24 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
     const newBlocked = !isBlocked;
     setBlockedOverride(newBlocked);
     try {
+      const authUser = useAuthStore.getState().user;
       if (newBlocked) {
         await userApi.blockUser(otherParticipant._id);
+        if (authUser) {
+          useAuthStore.getState().setUser({
+            ...authUser,
+            blockedUsers: [...authUser.blockedUsers, otherParticipant._id],
+          });
+        }
         toast.success('User blocked');
       } else {
         await userApi.unblockUser(otherParticipant._id);
+        if (authUser) {
+          useAuthStore.getState().setUser({
+            ...authUser,
+            blockedUsers: authUser.blockedUsers.filter((id) => id !== otherParticipant._id),
+          });
+        }
         toast.success('User unblocked');
       }
     } catch (err: unknown) {
@@ -444,7 +458,6 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                     deleteConversationMut.mutate(conversation._id, {
                       onSuccess: () => {
                         setShowDeleteConfirm(false);
-                        toast.success('Group deleted');
                       },
                     });
                   }}

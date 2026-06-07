@@ -4,6 +4,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
+import type { FileRejection } from 'react-dropzone';
+import { toast } from 'sonner';
+import { FILE_MAX_SIZE, ACCEPTED_FILE_TYPES } from '@/src/constants';
 import {
   Send,
   Paperclip,
@@ -13,6 +16,9 @@ import {
   Loader2,
   Reply,
   Check,
+  Film,
+  FileText,
+  Mic,
 } from 'lucide-react';
 import { EmojiPicker } from '@/src/components/chat/emoji-picker';
 import { useSendMessage, useEditMessage } from '@/src/hooks/use-chat';
@@ -43,18 +49,56 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
 
   const isEditing = !!editingMessage;
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFileSelect = useCallback((f: File) => {
+    if (f.size > FILE_MAX_SIZE) {
+      toast.error(`File too large. Maximum size is ${FILE_MAX_SIZE / (1024 * 1024)}MB`);
+      return;
+    }
+    if (!ACCEPTED_FILE_TYPES.includes(f.type)) {
+      toast.error('File type not supported');
+      return;
+    }
+    setFile(f);
+    if (f.type.startsWith('image/') || f.type.startsWith('video/') || f.type.startsWith('audio/')) {
+      setFilePreview(URL.createObjectURL(f));
+    } else {
+      setFilePreview(null);
+    }
+  }, []);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0];
     if (!f) return;
-    setFile(f);
-    if (f.type.startsWith('image/')) {
-      setFilePreview(URL.createObjectURL(f));
+    handleFileSelect(f);
+  }, [handleFileSelect]);
+
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const rejection = rejections[0];
+    if (rejection?.errors?.[0]) {
+      const error = rejection.errors[0];
+      if (error.code === 'file-too-large') {
+        toast.error(`File too large. Maximum size is ${FILE_MAX_SIZE / (1024 * 1024)}MB`);
+      } else if (error.code === 'file-invalid-type') {
+        toast.error('File type not supported');
+      } else {
+        toast.error(error.message);
+      }
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     maxFiles: 1,
+    maxSize: FILE_MAX_SIZE,
+    accept: ACCEPTED_FILE_TYPES.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
     noClick: true,
     noKeyboard: true,
   });
@@ -184,6 +228,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
   };
 
   const removeFile = () => {
+    if (filePreview) URL.revokeObjectURL(filePreview);
     setFile(null);
     setFilePreview(null);
   };
@@ -239,22 +284,51 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {filePreview && (
+        {file && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="px-4 py-2 bg-base-200 border-t border-base-300"
           >
-            <div className="relative inline-block">
-              <img
-                src={filePreview}
-                alt="Attached preview"
-                className="h-16 rounded-lg object-cover"
-              />
+            <div className="relative inline-flex items-center gap-2 bg-base-300/50 rounded-lg p-2 pr-3">
+              {file.type.startsWith('image/') && filePreview && (
+                <img src={filePreview} alt="" className="h-14 rounded object-cover" />
+              )}
+              {file.type.startsWith('video/') && (
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-base-300 flex items-center justify-center shrink-0">
+                    <Film className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate max-w-[120px]">{file.name}</p>
+                  </div>
+                </div>
+              )}
+              {file.type.startsWith('audio/') && (
+                <div className="flex items-center gap-2 max-w-[220px]">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mic className="w-4 h-4 text-primary" />
+                  </div>
+                  {filePreview && (
+                    <audio src={filePreview} controls className="h-8 w-32" preload="none" />
+                  )}
+                </div>
+              )}
+              {!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/') && (
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate max-w-[150px]">{file.name}</p>
+                    <p className="text-[10px] text-base-content/40">{formatFileSize(file.size)}</p>
+                  </div>
+                </div>
+              )}
               <button
                 onClick={removeFile}
-                className="absolute -top-1.5 -right-1.5 btn btn-circle btn-xs btn-error text-error-content"
+                className="btn btn-ghost btn-xs btn-square shrink-0 ml-1"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -279,12 +353,8 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) {
-                  setFile(f);
-                  if (f.type.startsWith('image/')) {
-                    setFilePreview(URL.createObjectURL(f));
-                  }
-                }
+                if (f) handleFileSelect(f);
+                e.target.value = '';
               }}
             />
           </label>

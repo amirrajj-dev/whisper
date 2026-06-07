@@ -4,9 +4,12 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ThemePicker } from '@/src/components/ui/theme-picker'
-import { LogIn } from 'lucide-react'
+import { useAuthStore } from '@/src/stores/auth.store'
+import { LogIn, MessageSquare } from 'lucide-react'
 
 export function Navbar() {
+  const { isAuthenticated } = useAuthStore()
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
@@ -28,20 +31,29 @@ export function Navbar() {
 
           <div className="flex items-center gap-2">
             <ThemePicker />
-            <div className="hidden sm:flex items-center gap-2">
-              <Link href="/login" className="btn btn-ghost btn-sm gap-1.5">
-                <LogIn className="w-4 h-4" />
-                Sign In
+            {isAuthenticated ? (
+              <Link href="/app" className="btn btn-primary btn-sm gap-1.5">
+                <MessageSquare className="w-4 h-4" />
+                Open App
               </Link>
-              <Link href="/register" className="btn btn-primary btn-sm">
-                Get Started
-              </Link>
-            </div>
-            <div className="sm:hidden">
-              <Link href="/login" className="btn btn-primary btn-sm">
-                Sign In
-              </Link>
-            </div>
+            ) : (
+              <>
+                <div className="hidden sm:flex items-center gap-2">
+                  <Link href="/login" className="btn btn-ghost btn-sm gap-1.5">
+                    <LogIn className="w-4 h-4" />
+                    Sign In
+                  </Link>
+                  <Link href="/register" className="btn btn-primary btn-sm">
+                    Get Started
+                  </Link>
+                </div>
+                <div className="sm:hidden">
+                  <Link href="/login" className="btn btn-primary btn-sm">
+                    Sign In
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

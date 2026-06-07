@@ -14,6 +14,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/src/stores/auth.store';
 import type { PopulatedUser } from '@/src/types/entities/user';
 
 interface UserProfileModalProps {
@@ -48,11 +49,24 @@ export function UserProfileModal({
     const newBlocked = !isBlocked;
     setBlockedOverride(newBlocked);
     try {
+      const authUser = useAuthStore.getState().user;
       if (newBlocked) {
         await userApi.blockUser(targetUser._id);
+        if (authUser) {
+          useAuthStore.getState().setUser({
+            ...authUser,
+            blockedUsers: [...authUser.blockedUsers, targetUser._id],
+          });
+        }
         toast.success('User blocked');
       } else {
         await userApi.unblockUser(targetUser._id);
+        if (authUser) {
+          useAuthStore.getState().setUser({
+            ...authUser,
+            blockedUsers: authUser.blockedUsers.filter((id) => id !== targetUser._id),
+          });
+        }
         toast.success('User unblocked');
       }
     } catch (err: unknown) {
@@ -191,13 +205,6 @@ export function UserProfileModal({
                   {isBlocked ? 'Unblock User' : 'Block User'}
                 </button>
               )}
-
-              <div className="space-y-2 pt-2 border-t border-base-200">
-                <div className="flex items-center gap-2 text-sm text-base-content/60">
-                  <User className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">ID: {targetUser._id}</span>
-                </div>
-              </div>
             </motion.div>
           </motion.div>
         </div>

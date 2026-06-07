@@ -318,7 +318,13 @@ export class ChatService {
           this.logger.log(
             `Existing private conversation found between ${participants.join(', ')}`,
           );
-          return existingConversation;
+          const populated = await this.conversationModel
+            .findById(existingConversation._id)
+            .populate('participants', 'username email avatarUrl lastSeen')
+            .populate('createdBy', 'username email avatarUrl')
+            .exec();
+          const convObj = populated!.toObject ? populated!.toObject() : populated;
+          return { ...convObj, isExisting: true };
         }
       }
 

@@ -54,17 +54,23 @@ export function useCreateConversation() {
 
   return useMutation({
     mutationFn: (data: CreateConversationDto) => chatApi.createConversation(data),
-    onSuccess: (conversation) => {
-      queryClient.setQueryData<InfiniteData<{ conversations: Conversation[]; page: number; totalPages: number }>>(
-        ['conversations'],
-        (old) => {
-          if (!old?.pages?.length) return old;
-          const pages = [...old.pages];
-          pages[0] = { ...pages[0], conversations: [conversation, ...pages[0].conversations] };
-          return { ...old, pages };
-        },
-      );
-      toast.success('Conversation created');
+    onSuccess: (raw) => {
+      const result = raw as Conversation & { isExisting?: boolean };
+      const conversation = result as Conversation;
+      if (result.isExisting) {
+        toast.success('Conversation with this user already exists');
+      } else {
+        queryClient.setQueryData<InfiniteData<{ conversations: Conversation[]; page: number; totalPages: number }>>(
+          ['conversations'],
+          (old) => {
+            if (!old?.pages?.length) return old;
+            const pages = [...old.pages];
+            pages[0] = { ...pages[0], conversations: [conversation, ...pages[0].conversations] };
+            return { ...old, pages };
+          },
+        );
+        toast.success('Conversation created');
+      }
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to create conversation');
@@ -224,7 +230,8 @@ export function useRemoveParticipant() {
   return useMutation({
     mutationFn: ({ conversationId, userId }: { conversationId: string; userId: string }) =>
       chatApi.removeParticipant(conversationId, userId),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success('Participant removed');
     },
@@ -240,7 +247,8 @@ export function usePromoteToAdmin() {
   return useMutation({
     mutationFn: ({ conversationId, userId }: { conversationId: string; userId: string }) =>
       chatApi.promoteToAdmin(conversationId, userId),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success('User promoted to admin');
     },
@@ -256,7 +264,8 @@ export function useDemoteFromAdmin() {
   return useMutation({
     mutationFn: ({ conversationId, userId }: { conversationId: string; userId: string }) =>
       chatApi.demoteFromAdmin(conversationId, userId),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success('User demoted from admin');
     },
@@ -272,7 +281,8 @@ export function useTransferOwnership() {
   return useMutation({
     mutationFn: ({ conversationId, newOwnerId }: { conversationId: string; newOwnerId: string }) =>
       chatApi.transferOwnership(conversationId, { newOwnerId }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success('Ownership transferred');
     },
@@ -314,6 +324,7 @@ export function useMessageUnreadCounts() {
 
 export function useDeleteConversation() {
   const queryClient = useQueryClient();
+  const { activeConversationId, setActiveConversation } = useChatStore();
 
   return useMutation({
     mutationFn: (conversationId: string) => chatApi.deleteConversation(conversationId),
@@ -331,7 +342,12 @@ export function useDeleteConversation() {
           };
         },
       );
-      toast.success('Conversation deleted');
+      if (activeConversationId === conversationId) {
+        setActiveConversation(null);
+      }
+      queryClient.removeQueries({ queryKey: ['conversation', conversationId] });
+      queryClient.removeQueries({ queryKey: ['messages', conversationId] });
+      toast.success('Group deleted');
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || 'Failed to delete conversation');

@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useConversations, useMessageUnreadCounts } from '@/src/hooks/use-chat';
 import { ConversationItem } from '@/src/components/chat/conversation-item';
 import { ConversationSkeleton } from '@/src/components/common/loading-skeleton';
 import { useChatStore } from '@/src/stores/chat.store';
+import { usePresenceStore } from '@/src/stores/presence.store';
+import { useCurrentUser } from '@/src/hooks/use-auth';
+import { socketManager } from '@/src/socket/socket.manager';
 import { motion } from 'framer-motion';
 import { MessageSquare, Search, X, AlertCircle } from 'lucide-react';
 import type { Conversation } from '@/src/types/entities/conversation';
@@ -17,7 +20,29 @@ interface ConversationListProps {
 export function ConversationList({ onSelectConversation }: ConversationListProps) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isError, refetch } = useConversations();
   const { activeConversationId, conversationsSearch, setConversationsSearch, setUnreadCounts } = useChatStore();
+  const { user } = useCurrentUser();
+  const { fetchAndSetOnline } = usePresenceStore();
   const unreadCountsQuery = useMessageUnreadCounts();
+  const presenceSynced = useRef(false);
+
+  useEffect(() => {
+    if (!data?.pages?.length || !user || presenceSynced.current) return;
+    presenceSynced.current = true;
+
+    const ids = new Set<string>();
+    for (const page of data.pages) {
+      for (const c of page.conversations) {
+        socketManager.joinConversation(c._id);
+        const participants = (c.participants as PopulatedUser[]) || [];
+        for (const p of participants) {
+          if (p._id !== user._id) ids.add(p._id);
+        }
+      }
+    }
+    if (ids.size > 0) {
+      fetchAndSetOnline(Array.from(ids));
+    }
+  }, [data, user, fetchAndSetOnline]);
 
   useEffect(() => {
     if (unreadCountsQuery.data) {
