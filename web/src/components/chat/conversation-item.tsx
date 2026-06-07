@@ -58,6 +58,9 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const { user } = useCurrentUser();
   const unreadCount = useChatStore((s) => s.unreadCounts[conversation._id] || 0);
+  const typingAll = useChatStore((s) => s.typingUsers);
+  const typingUsers = typingAll[conversation._id];
+  const isTyping = !!typingUsers?.length;
   const isOnline = usePresenceStore((s) => {
     const other = getOtherParticipant(
       conversation.participants as PopulatedUser[],
@@ -101,13 +104,24 @@ export function ConversationItem({
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-base-content/60 truncate">
-            {conversation.lastMessage ? (
-              conversation.lastMessage
-            ) : (
-              <span className="text-base-content/30 italic">No messages yet</span>
-            )}
-          </span>
+          {isTyping ? (
+            <span className="text-xs text-primary font-medium flex items-center gap-1">
+              typing
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+              </span>
+            </span>
+          ) : (
+            <span className="text-xs text-base-content/60 truncate">
+              {conversation.lastMessage ? (
+                conversation.lastMessage
+              ) : (
+                <span className="text-base-content/30 italic">No messages yet</span>
+              )}
+            </span>
+          )}
           {unreadCount > 0 && (
             <span className="badge badge-primary badge-xs shrink-0">{unreadCount}</span>
           )}

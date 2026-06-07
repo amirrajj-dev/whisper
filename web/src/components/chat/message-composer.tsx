@@ -23,6 +23,7 @@ import {
 import { EmojiPicker } from '@/src/components/chat/emoji-picker';
 import { useSendMessage, useEditMessage } from '@/src/hooks/use-chat';
 import { useChatStore } from '@/src/stores/chat.store';
+import { useAuthStore } from '@/src/stores/auth.store';
 import { socketManager } from '@/src/socket/socket.manager';
 import type { MessageType } from '@/src/types/entities/message';
 
@@ -45,7 +46,11 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
     setReplyingTo,
     editingMessage,
     setEditingMessage,
+    addTypingUser,
+    removeTypingUser,
   } = useChatStore();
+
+  const { user } = useAuthStore();
 
   const isEditing = !!editingMessage;
 
@@ -141,18 +146,23 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
       socketManager.startTyping(conversationId);
       typingThrottleRef.current = now;
     }
+    if (user) {
+      addTypingUser(conversationId, { userId: user._id, username: user.username });
+    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       socketManager.stopTyping(conversationId);
+      if (user) removeTypingUser(conversationId, user._id);
     }, 3000);
-  }, [conversationId]);
+  }, [conversationId, user, addTypingUser, removeTypingUser]);
 
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketManager.stopTyping(conversationId);
+      if (user) removeTypingUser(conversationId, user._id);
     };
-  }, [conversationId]);
+  }, [conversationId, user, removeTypingUser]);
 
   const handleSend = useCallback(async () => {
     if (!content.trim() && !file) return;
@@ -169,6 +179,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
             setContent('');
             setEditingMessage(null);
             socketManager.stopTyping(conversationId);
+            if (user) removeTypingUser(conversationId, user._id);
           },
         },
       );
@@ -200,10 +211,11 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
           setFilePreview(null);
           setReplyingTo(null);
           socketManager.stopTyping(conversationId);
+          if (user) removeTypingUser(conversationId, user._id);
         },
       },
     );
-  }, [content, file, conversationId, replyingTo, sendMutation, editMutation, isEditing, editingMessage, setReplyingTo, setEditingMessage]);
+  }, [content, file, conversationId, replyingTo, sendMutation, editMutation, isEditing, editingMessage, setReplyingTo, setEditingMessage, user, removeTypingUser]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
