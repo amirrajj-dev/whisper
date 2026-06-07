@@ -23,16 +23,23 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
   const { user } = useCurrentUser();
   const { fetchAndSetOnline } = usePresenceStore();
   const unreadCountsQuery = useMessageUnreadCounts();
-  const presenceSynced = useRef(false);
+  const presenceFetched = useRef(false);
 
   useEffect(() => {
-    if (!data?.pages?.length || !user || presenceSynced.current) return;
-    presenceSynced.current = true;
+    if (!data?.pages?.length || !user) return;
+
+    for (const page of data.pages) {
+      for (const c of page.conversations) {
+        socketManager.joinConversation(c._id);
+      }
+    }
+
+    if (presenceFetched.current) return;
+    presenceFetched.current = true;
 
     const ids = new Set<string>();
     for (const page of data.pages) {
       for (const c of page.conversations) {
-        socketManager.joinConversation(c._id);
         const participants = (c.participants as PopulatedUser[]) || [];
         for (const p of participants) {
           if (p._id !== user._id) ids.add(p._id);

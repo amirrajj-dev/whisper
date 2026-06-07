@@ -323,7 +323,7 @@ export class ChatService {
             .populate('participants', 'username email avatarUrl lastSeen')
             .populate('createdBy', 'username email avatarUrl')
             .exec();
-          const convObj = populated!.toObject ? populated!.toObject() : populated;
+          const convObj = populated!.toObject();
           return { ...convObj, isExisting: true };
         }
       }
@@ -898,7 +898,14 @@ export class ChatService {
 
       // Delete file from Cloudinary if exists
       if (message.publicId) {
-        const resourceType = message.type === 'image' ? 'image' : 'video';
+        const resourceType =
+          message.type === 'image'
+            ? 'image'
+            : message.type === 'video' || message.type === 'voice'
+              ? 'video'
+              : message.type === 'file'
+                ? 'raw'
+                : 'image';
         await this.uploadService.deleteFile(message.publicId, resourceType);
       }
 
@@ -1204,20 +1211,39 @@ export class ChatService {
         );
       }
 
-      // Delete files from Cloudinary (outside transaction)
+      // Delete files from Cloudinary (best-effort, outside transaction)
       const messages = await this.messageModel.find({ conversationId });
       for (const message of messages) {
         if (message.publicId) {
-          const resourceType = message.type === 'image' ? 'image' : 'video';
-          await this.uploadService.deleteFile(message.publicId, resourceType);
+          try {
+            const resourceType =
+              message.type === 'image'
+                ? 'image'
+                : message.type === 'video' || message.type === 'voice'
+                  ? 'video'
+                  : message.type === 'file'
+                    ? 'raw'
+                    : 'image';
+            await this.uploadService.deleteFile(message.publicId, resourceType);
+          } catch (fileErr) {
+            this.logger.warn(
+              `Failed to delete file ${message.publicId}: ${fileErr instanceof Error ? fileErr.message : fileErr}`,
+            );
+          }
         }
       }
 
       if (conversation.publicId) {
-        await this.uploadService.deleteFile(conversation.publicId, 'image');
+        try {
+          await this.uploadService.deleteFile(conversation.publicId, 'image');
+        } catch (fileErr) {
+          this.logger.warn(
+            `Failed to delete conversation avatar ${conversation.publicId}: ${fileErr instanceof Error ? fileErr.message : fileErr}`,
+          );
+        }
       }
 
-      const session = await mongoose.startSession();
+      const session = await this.conversationModel.db.startSession();
       session.startTransaction();
 
       try {

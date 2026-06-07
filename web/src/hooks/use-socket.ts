@@ -21,6 +21,8 @@ import type {
   ParticipantAddedPayload,
   ParticipantRemovedPayload,
   ParticipantRoleChangedPayload,
+  UserTypingPayload,
+  UserStopTypingPayload,
 } from "@/src/types/socket/events";
 import type { Message } from "@/src/types/entities/message";
 import type { Conversation } from "@/src/types/entities/conversation";
@@ -297,7 +299,7 @@ export function useSocket() {
       );
     });
 
-    registerEvent("user:typing", (data) => {
+    registerEvent("user:typing", (data: UserTypingPayload) => {
       const conversationsData = queryClient.getQueryData<
         InfiniteData<{ conversations: Conversation[] }>
       >(["conversations"]);
@@ -312,7 +314,7 @@ export function useSocket() {
       });
     });
 
-    registerEvent("user:stop_typing", (data) => {
+    registerEvent("user:stop_typing", (data: UserStopTypingPayload) => {
       removeTypingUser(data.conversationId, data.userId);
     });
 
@@ -414,6 +416,8 @@ export function useSocket() {
     registerEvent(
       "conversation:deleted",
       (data: ConversationDeletedPayload) => {
+        socketManager.leaveConversation(data.conversationId);
+
         queryClient.setQueryData<
           InfiniteData<{ conversations: Conversation[] }>
         >(["conversations"], (old) => {
@@ -481,21 +485,24 @@ export function useSocket() {
     });
 
     registerEvent("connected", async () => {
-      // Refresh conversations to get fresh lastSeen data
-      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      const conversationsData = queryClient.getQueryData<
-        InfiniteData<{ conversations: Conversation[] }>
-      >(["conversations"]);
+      useChatStore.setState({ typingUsers: {} });
+
+      const results = await queryClient.refetchQueries({
+        queryKey: ["conversations"],
+      });
+      const resultItem = results?.[0] as
+        | { data: InfiniteData<{ conversations: Conversation[] }> }
+        | undefined;
+      const conversationsData = resultItem?.data;
 
       if (user) {
         const otherIds = getOtherParticipantIds(conversationsData, user._id);
         if (otherIds.length > 0) {
           await fetchAndSetOnline(otherIds);
         }
-        // Refresh presence for the active conversation if any
         const activeId = useChatStore.getState().activeConversationId;
         if (activeId) {
-          queryClient.invalidateQueries({
+          await queryClient.refetchQueries({
             queryKey: ["conversation", activeId],
           });
         }
@@ -549,7 +556,6 @@ export function useSocket() {
     };
   }, [
     isAuthenticated,
-    user?._id,
     addTypingUser,
     removeTypingUser,
     incrementUnread,

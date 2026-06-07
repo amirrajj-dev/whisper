@@ -49,9 +49,7 @@ export class ChatController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get per-conversation unread message counts' })
   @ApiResponse({ status: 200, description: 'Unread counts per conversation' })
-  async getUnreadCounts(
-    @CurrentUser() user: Omit<User, 'password'>,
-  ) {
+  async getUnreadCounts(@CurrentUser() user: Omit<User, 'password'>) {
     return this.chatService.getUnreadCounts(user._id);
   }
 

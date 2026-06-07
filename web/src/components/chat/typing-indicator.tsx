@@ -11,41 +11,38 @@ interface TypingIndicatorProps {
 const TYPING_TIMEOUT = 4000;
 
 export function TypingIndicator({ conversationId }: TypingIndicatorProps) {
-  const { typingUsers, removeTypingUser } = useChatStore();
+  const users = useChatStore((s) => s.typingUsers[conversationId]);
+  const removeTypingUser = useChatStore((s) => s.removeTypingUser);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const conversationIdRef = useRef(conversationId);
-
-  conversationIdRef.current = conversationId;
-
-  const users = typingUsers[conversationId];
 
   useEffect(() => {
+    const timers = timersRef.current;
     const currentIds = new Set(users?.map((u) => u.userId) || []);
-    const existingIds = new Set(timersRef.current.keys());
+    const existingIds = new Set(timers.keys());
 
     for (const id of existingIds) {
       if (!currentIds.has(id)) {
-        clearTimeout(timersRef.current.get(id)!);
-        timersRef.current.delete(id);
+        clearTimeout(timers.get(id)!);
+        timers.delete(id);
       }
     }
 
     if (!users?.length) return;
 
     for (const u of users) {
-      if (timersRef.current.has(u.userId)) {
-        clearTimeout(timersRef.current.get(u.userId)!);
+      if (timers.has(u.userId)) {
+        clearTimeout(timers.get(u.userId)!);
       }
       const timer = setTimeout(() => {
-        removeTypingUser(conversationIdRef.current, u.userId);
-        timersRef.current.delete(u.userId);
+        removeTypingUser(conversationId, u.userId);
+        timers.delete(u.userId);
       }, TYPING_TIMEOUT);
-      timersRef.current.set(u.userId, timer);
+      timers.set(u.userId, timer);
     }
 
     return () => {
-      for (const [, timer] of timersRef.current) clearTimeout(timer);
-      timersRef.current.clear();
+      for (const [, timer] of timers) clearTimeout(timer);
+      timers.clear();
     };
   }, [users, conversationId, removeTypingUser]);
 

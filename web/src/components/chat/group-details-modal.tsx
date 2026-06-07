@@ -95,7 +95,6 @@ function AddParticipantsModal({
     if (!selected.length) return;
     try {
       await addParticipants.mutateAsync({ conversationId, userIds: selected });
-      toast.success('Participants added');
       onClose();
       setSelected([]);
       setSearch('');
@@ -222,7 +221,6 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     if (!conversation) return;
     try {
       await promoteToAdmin.mutateAsync({ conversationId: conversation._id, userId });
-      toast.success('User promoted to admin');
     } catch {
       // handled by hook
     }
@@ -232,7 +230,6 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     if (!conversation) return;
     try {
       await demoteFromAdmin.mutateAsync({ conversationId: conversation._id, userId });
-      toast.success('User demoted from admin');
     } catch {
       // handled by hook
     }
@@ -242,7 +239,6 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     if (!conversation) return;
     try {
       await removeParticipant.mutateAsync({ conversationId: conversation._id, userId });
-      toast.success('Participant removed');
     } catch {
       // handled by hook
     }
@@ -252,7 +248,6 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
     if (!conversation) return;
     try {
       await transferOwnership.mutateAsync({ conversationId: conversation._id, newOwnerId });
-      toast.success('Ownership transferred');
       setShowTransferConfirm(null);
     } catch {
       // handled by hook

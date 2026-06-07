@@ -83,7 +83,7 @@ function formatFileSize(bytes?: number): string {
 function MessageContent({ message, searchQuery }: { message: Message; searchQuery?: string }) {
   if (message.deleted) {
     return (
-      <span className="italic text-base-content/40 text-xs">
+      <span className="italic text-primary-content text-xs">
         [Message deleted]
       </span>
     );

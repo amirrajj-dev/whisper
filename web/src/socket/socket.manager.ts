@@ -14,7 +14,6 @@ class SocketManager {
   private socket: TypedSocket | null = null;
   private joinedRooms: Set<string> = new Set();
   private reconnectAttempts = 0;
-  private onReconnectCallbacks: Array<() => void> = [];
   private onAuthErrorCallbacks: Array<() => void> = [];
 
   connect(): TypedSocket {
@@ -75,15 +74,6 @@ class SocketManager {
     }
   }
 
-  onReconnect(cb: () => void): () => void {
-    this.onReconnectCallbacks.push(cb);
-    return () => {
-      this.onReconnectCallbacks = this.onReconnectCallbacks.filter(
-        (c) => c !== cb,
-      );
-    };
-  }
-
   onAuthError(cb: () => void): () => void {
     this.onAuthErrorCallbacks.push(cb);
     return () => {
@@ -99,9 +89,6 @@ class SocketManager {
         conversationId: roomId,
       });
     }
-    for (const cb of this.onReconnectCallbacks) {
-      cb();
-    }
   }
 
   disconnect(): void {
@@ -115,7 +102,6 @@ class SocketManager {
 
   fullCleanup(): void {
     this.joinedRooms.clear();
-    this.onReconnectCallbacks = [];
     this.onAuthErrorCallbacks = [];
     this.disconnect();
   }
@@ -171,6 +157,9 @@ class SocketManager {
     event: E,
     handler: ServerToClientEvents[E],
   ): () => void {
+    if (!this.socket) {
+      return () => {};
+    }
     const s = this.socket as unknown as Socket;
     const wrapper = handler as (...args: unknown[]) => void;
     s.on(event as string, wrapper);
