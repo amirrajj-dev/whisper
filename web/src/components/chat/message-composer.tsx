@@ -252,6 +252,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
             setEditingMessage(null);
             socketManager.stopTyping(conversationId);
             if (user) removeTypingUser(conversationId, user._id);
+            requestAnimationFrame(() => textareaRef.current?.focus());
           },
         },
       );
@@ -284,6 +285,7 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
           setReplyingTo(null);
           socketManager.stopTyping(conversationId);
           if (user) removeTypingUser(conversationId, user._id);
+          requestAnimationFrame(() => textareaRef.current?.focus());
         },
       },
     );
