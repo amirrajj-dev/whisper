@@ -29,6 +29,7 @@ export const ACCEPTED_FILE_TYPES = [
   'audio/mp3',
   'audio/wav',
   'audio/ogg',
+  'audio/webm',
   'application/pdf',
   'text/plain',
 ];

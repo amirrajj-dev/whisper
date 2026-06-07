@@ -19,6 +19,8 @@ import {
   Film,
   FileText,
   Mic,
+  Square,
+  Trash2,
 } from 'lucide-react';
 import { EmojiPicker } from '@/src/components/chat/emoji-picker';
 import { useSendMessage, useEditMessage } from '@/src/hooks/use-chat';
@@ -53,6 +55,76 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
   const { user } = useAuthStore();
 
   const isEditing = !!editingMessage;
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const recordedFile = new File([blob], 'voice-message.webm', { type: 'audio/webm' });
+        setFile(recordedFile);
+        setFilePreview(URL.createObjectURL(blob));
+        setIsRecording(false);
+        setRecordingTime(0);
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch {
+      toast.error('Microphone access denied');
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes <= 0) return '';
@@ -318,12 +390,12 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
                 </div>
               )}
               {file.type.startsWith('audio/') && (
-                <div className="flex items-center gap-2 max-w-[220px]">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Mic className="w-4 h-4 text-primary" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                   </div>
                   {filePreview && (
-                    <audio src={filePreview} controls className="h-8 w-32" preload="none" />
+                    <audio src={filePreview} controls className="h-9 sm:h-12 w-52 sm:w-70 md:w-80" preload="none" />
                   )}
                 </div>
               )}
@@ -370,21 +442,59 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
               }}
             />
           </label>
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={!!file}
+            className={`btn btn-sm btn-square relative ${
+              isRecording
+                ? 'bg-error text-white hover:bg-error/90 animate-pulse'
+                : 'btn-ghost text-base-content/40 hover:text-error'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Record voice'}
+          >
+            {isRecording ? (
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white" />
+                <span className="text-xs font-mono tabular-nums">{formatTime(recordingTime)}</span>
+              </div>
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+          </button>
         </div>
 
-        <TextareaAutosize
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            handleTyping();
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder={isDragActive ? '' : isEditing ? 'Edit your message...' : 'Type a message...'}
-          maxRows={5}
-          className="flex-1 resize-none bg-base-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px]"
-          disabled={sendMutation.isPending || editMutation.isPending}
-        />
+        {isRecording ? (
+          <div className="flex-1 flex items-center gap-3 bg-error/5 rounded-xl px-4 py-3 sm:py-3.5 min-h-[44px] sm:min-h-[52px]">
+            <div className="flex gap-1 items-end">
+              <span className="w-1.5 h-4 sm:h-5 rounded-full bg-error animate-[bounce_0.6s_infinite]" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-3 sm:h-4 rounded-full bg-error animate-[bounce_0.6s_infinite]" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-5 sm:h-6 rounded-full bg-error animate-[bounce_0.6s_infinite]" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-sm sm:text-base text-error font-medium">Recording... {formatTime(recordingTime)}</span>
+            <div className="flex-1" />
+            <button
+              onClick={cancelRecording}
+              className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-error"
+              title="Cancel recording"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <TextareaAutosize
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              handleTyping();
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={isDragActive ? '' : isEditing ? 'Edit your message...' : 'Type a message...'}
+            maxRows={5}
+            className="flex-1 resize-none bg-base-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px]"
+            disabled={sendMutation.isPending || editMutation.isPending}
+          />
+        )}
 
         <motion.button
           whileTap={{ scale: 0.9 }}

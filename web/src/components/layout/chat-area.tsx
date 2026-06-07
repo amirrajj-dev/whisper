@@ -189,7 +189,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        <TypingIndicator conversationId={conversationId} />
+        {/* <TypingIndicator conversationId={conversationId} /> */}
       </div>
 
       <MessageComposer conversationId={conversationId} />

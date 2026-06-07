@@ -40,6 +40,7 @@ export const FILE_VALIDATION = {
       'audio/mp3',
       'audio/wav',
       'audio/ogg',
+      'audio/webm',
       'application/pdf',
       'text/plain',
     ];
