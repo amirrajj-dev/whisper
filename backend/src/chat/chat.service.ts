@@ -853,6 +853,8 @@ export class ChatService {
       await this.invalidateConversationCacheForUsers(participantIds);
       this.eventEmitter.emit(ChatEvents.MESSAGE_SENT, {
         conversationId: data.conversationId,
+        conversationType: conversation.type,
+        conversationName: conversation.name || undefined,
         messageId: message._id.toString(),
         senderId,
         senderUsername: senderObj?.username || 'Unknown',

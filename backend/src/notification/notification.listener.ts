@@ -16,6 +16,8 @@ export class NotificationListener {
   async handleMessageSent(payload: any) {
     const {
       conversationId,
+      conversationType,
+      conversationName,
       senderId,
       senderUsername,
       type,
@@ -25,6 +27,12 @@ export class NotificationListener {
 
     const notificationMessage =
       type === 'text' ? content.substring(0, 100) : `Sent a ${type}`;
+
+    const isGroup = conversationType === 'group';
+    const groupLabel = conversationName || 'Group';
+    const displayMessage = isGroup
+      ? `${senderUsername}: ${notificationMessage} (in ${groupLabel})`
+      : `${senderUsername}: ${notificationMessage}`;
 
     const otherParticipants = (participants as string[]).filter(
       (id) => id !== senderId,
@@ -41,7 +49,7 @@ export class NotificationListener {
             userId,
             type: 'message',
             relatedConversation: conversationId,
-            message: `${senderUsername}: ${notificationMessage}`,
+            message: displayMessage,
           })
           .catch((error) => {
             this.logger?.error?.(
