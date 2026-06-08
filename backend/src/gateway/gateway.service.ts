@@ -195,7 +195,11 @@ export class GatewayService implements OnModuleInit {
   private handleParticipantAdded(data: any): void {
     this.emitToConversation(data.conversationId, 'participant:added', data);
     for (const newUserId of data.newParticipants) {
-      this.emitToUser(newUserId, 'conversation:new', data.conversation);
+      this.emitToUser(newUserId, 'conversation:new', {
+        conversationId: data.conversationId,
+        participants: data.newParticipants,
+        conversation: data.conversation,
+      });
     }
   }
 

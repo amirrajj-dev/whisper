@@ -465,19 +465,21 @@ export class ChatService {
 
       await this.invalidateConversationCacheForUsers(newUserIds);
 
+      const updatedConversation = await this.conversationModel
+        .findById(conversationId)
+        .populate('participants', 'username email avatarUrl lastSeen')
+        .populate('createdBy', 'username email avatarUrl')
+        .exec();
+
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ADDED, {
         conversationId,
         conversationName: conversation.name || 'Group',
         newParticipants: newUserIds,
         addedBy: currentUserId,
+        conversation: updatedConversation,
       });
 
-      // Return updated conversation
-      return this.conversationModel
-        .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
-        .exec();
+      return updatedConversation;
     } catch (error) {
       this.logger.error(
         `Error adding participants: ${error instanceof Error ? error.message : error}`,
