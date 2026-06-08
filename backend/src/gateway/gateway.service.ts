@@ -8,6 +8,7 @@ export class GatewayService implements OnModuleInit {
   private server: Server;
   private readonly userSockets = new Map<string, Set<string>>();
   private readonly socketUsers = new Map<string, string>();
+  private readonly activeConversations = new Map<string, string>();
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
@@ -127,6 +128,18 @@ export class GatewayService implements OnModuleInit {
       if (room.has(socketId)) return true;
     }
     return false;
+  }
+
+  setActiveConversation(userId: string, conversationId: string | null): void {
+    if (conversationId === null) {
+      this.activeConversations.delete(userId);
+    } else {
+      this.activeConversations.set(userId, conversationId);
+    }
+  }
+
+  getActiveConversation(userId: string): string | undefined {
+    return this.activeConversations.get(userId);
   }
 
   getConnectionStats(): { onlineUsers: number; activeSockets: number } {

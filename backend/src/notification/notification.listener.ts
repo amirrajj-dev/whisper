@@ -32,16 +32,9 @@ export class NotificationListener {
 
     await Promise.all(
       otherParticipants.map(async (userId) => {
-        const isInRoom = await this.gatewayService.isUserInConversation(
-          userId,
-          conversationId,
-        );
-        if (isInRoom) return;
-
-        // User isn't in the conversation room — emit message:new directly to
-        // their socket(s) so the chat cache updates immediately, alongside
-        // the notification for the drawer
-        this.gatewayService.emitToUser(userId, 'message:new', payload);
+        const activeConv =
+          this.gatewayService.getActiveConversation(userId);
+        if (activeConv === conversationId) return;
 
         return this.notificationService
           .create({

@@ -95,8 +95,10 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   useEffect(() => {
     if (!conversationId) return;
     socketManager.joinConversation(conversationId);
+    socketManager.setViewingConversation(conversationId);
     return () => {
       socketManager.leaveConversation(conversationId);
+      socketManager.clearViewingConversation();
     };
   }, [conversationId]);
 

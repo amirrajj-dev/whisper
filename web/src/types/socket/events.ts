@@ -27,6 +27,8 @@ export interface ClientToServerEvents {
   'typing:start': (data: { conversationId: string }) => void;
   'typing:stop': (data: { conversationId: string }) => void;
   'message:read': (data: { conversationId: string }) => void;
+  'conversation:viewing': (data: { conversationId: string }) => void;
+  'conversation:stopped_viewing': () => void;
 }
 
 export interface UserOnlinePayload {

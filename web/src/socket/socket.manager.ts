@@ -153,6 +153,18 @@ class SocketManager {
     });
   }
 
+  setViewingConversation(conversationId: string): void {
+    if (!this.socket?.connected) return;
+    (this.socket as unknown as Socket).emit("conversation:viewing", {
+      conversationId,
+    });
+  }
+
+  clearViewingConversation(): void {
+    if (!this.socket?.connected) return;
+    (this.socket as unknown as Socket).emit("conversation:stopped_viewing");
+  }
+
   on<E extends keyof ServerToClientEvents>(
     event: E,
     handler: ServerToClientEvents[E],

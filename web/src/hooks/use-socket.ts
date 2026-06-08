@@ -539,6 +539,7 @@ export function useSocket() {
         }
         const activeId = useChatStore.getState().activeConversationId;
         if (activeId) {
+          socketManager.setViewingConversation(activeId);
           await queryClient.refetchQueries({
             queryKey: ["conversation", activeId],
           });
