@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMessages, useConversation } from '@/src/hooks/use-chat';
 import { MessageBubble } from '@/src/components/chat/message-bubble';
 import { MessageComposer } from '@/src/components/chat/message-composer';
@@ -34,6 +35,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
 
   const { setReplyingTo, setEditingMessage, searchQuery, isSearchActive, setSearchMatchIds, clearSearch } = useChatStore();
   const deleteMessage = useDeleteMessage();
+  const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
@@ -106,9 +108,10 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
     if (!conversationId || !messagesData?.pages?.length) return;
     const timer = setTimeout(() => {
       socketManager.markAsRead(conversationId);
+      queryClient.invalidateQueries({ queryKey: ['message-unread-counts'] });
     }, 500);
     return () => clearTimeout(timer);
-  }, [conversationId, messagesData?.pages?.length]);
+  }, [conversationId, messagesData?.pages?.length, queryClient]);
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;

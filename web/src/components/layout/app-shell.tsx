@@ -14,18 +14,6 @@ import { useMediaQuery } from "@/src/hooks/use-media-query";
 
 type View = "conversations" | "notifications";
 
-const slideVariants = {
-  enter: (isMobile: boolean) => ({
-    x: isMobile ? "30%" : 0,
-    opacity: isMobile ? 0 : 1,
-  }),
-  center: { x: 0, opacity: 1 },
-  exit: (isMobile: boolean) => ({
-    x: isMobile ? "-30%" : 0,
-    opacity: isMobile ? 0 : 1,
-  }),
-};
-
 export function AppShell() {
   const { activeConversationId, setActiveConversation } = useChatStore();
   const [view, setView] = useState<View>("conversations");
@@ -66,114 +54,83 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const showSidebar = true;
+  return (
+    <div className="flex h-screen bg-base-100 overflow-hidden">
+      <Sidebar
+        onNewConversation={() => setShowNewConversation(true)}
+        onShowNotifications={() => setView("notifications")}
+        onSearch={() => setShowCommandPalette(true)}
+        onShowConversations={handleShowConversations}
+      />
 
-  const mainContent = () => {
-    if (view === "notifications") {
-      return (
-        <motion.div
-          key="notifications"
-          custom={isMobile}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className={`flex flex-col bg-base-100 ${isMobile ? "w-full" : "w-80 border-r border-base-300"}`}
-        >
+      {view === "notifications" ? (
+        <div className={`flex flex-col bg-base-100 flex-shrink-0 ${isMobile ? "w-full" : "w-80 border-r border-base-300"}`}>
           <NotificationsView
             onBack={isMobile ? () => setView("conversations") : undefined}
           />
-        </motion.div>
-      );
-    }
-
-    if (!activeConversationId) {
-      return (
-        <motion.div
-          key="conversation-list"
-          custom={isMobile}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className={`flex flex-col border-r border-base-300 bg-base-100 ${
-            isMobile ? "w-full" : "w-80"
-          }`}
-        >
+        </div>
+      ) : (
+        <div className={`flex flex-col border-r border-base-300 bg-base-100 flex-shrink-0 ${isMobile && activeConversationId ? "hidden" : "w-80"}`}>
           <ConversationList onSelectConversation={handleSelectConversation} />
-        </motion.div>
-      );
-    }
-
-    return (
-      <motion.div
-        key="chat-area"
-        custom={isMobile}
-        variants={slideVariants}
-        initial="enter"
-        animate="center"
-        exit="exit"
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="flex-1 flex flex-col min-w-0"
-      >
-        <ChatArea conversationId={activeConversationId} onBack={handleBack} />
-      </motion.div>
-    );
-  };
-
-  return (
-    <div className="flex h-screen bg-base-100 overflow-hidden">
-      {showSidebar && (
-        <Sidebar
-          onNewConversation={() => setShowNewConversation(true)}
-          onShowNotifications={() => setView("notifications")}
-          onSearch={() => setShowCommandPalette(true)}
-          onShowConversations={handleShowConversations}
-        />
-      )}
-
-      <AnimatePresence mode="wait" custom={isMobile}>
-        {mainContent()}
-      </AnimatePresence>
-
-      {!activeConversationId && view === "conversations" && !isMobile && (
-        <div className="hidden lg:flex flex-1 items-center justify-center bg-base-100/50">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-3xl bg-base-200 flex items-center justify-center mx-auto mb-4">
-              <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              >
-                <svg
-                  className="w-10 h-10 text-base-content/30"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </motion.div>
-            </div>
-            <h2 className="text-xl font-semibold mb-1">
-              Select a conversation
-            </h2>
-            <p className="text-sm text-base-content/40">
-              Choose from your existing conversations or start a new one
-            </p>
-          </div>
         </div>
       )}
+
+      <AnimatePresence mode="wait">
+        {activeConversationId ? (
+          <motion.div
+            key="chat-area"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex-1 flex flex-col min-w-0"
+          >
+            <ChatArea conversationId={activeConversationId} onBack={handleBack} />
+          </motion.div>
+        ) : view === "conversations" && !isMobile ? (
+          <motion.div
+            key="placeholder"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="hidden lg:flex flex-1 items-center justify-center bg-base-100/50"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-3xl bg-base-200 flex items-center justify-center mx-auto mb-4">
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <svg
+                    className="w-10 h-10 text-base-content/30"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </motion.div>
+              </div>
+              <h2 className="text-xl font-semibold mb-1">
+                Select a conversation
+              </h2>
+              <p className="text-sm text-base-content/40">
+                Choose from your existing conversations or start a new one
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <CommandPalette
         isOpen={showCommandPalette}

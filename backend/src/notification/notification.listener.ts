@@ -44,6 +44,14 @@ export class NotificationListener {
           this.gatewayService.getActiveConversation(userId);
         if (activeConv === conversationId) return;
 
+        const isInRoom = await this.gatewayService.isUserInConversation(
+          userId,
+          conversationId,
+        );
+        if (!isInRoom) {
+          this.gatewayService.emitToUser(userId, 'message:new', payload);
+        }
+
         return this.notificationService
           .create({
             userId,

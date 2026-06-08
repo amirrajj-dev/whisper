@@ -228,7 +228,7 @@ export class ChatGateway
         senderId: { $ne: userId },
         readBy: { $ne: userId },
       },
-      { $addToSet: { readBy: userId } },
+      { $addToSet: { readBy: userId, deliveredTo: userId } },
     );
 
     client.to(`conversation:${payload.conversationId}`).emit('messages:read', {
