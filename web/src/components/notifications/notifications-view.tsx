@@ -33,7 +33,7 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
           <h2 className="font-semibold">Notifications</h2>
         </div>
         {notifications.length > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 -translate-x-16 lg:translate-x-0">
             <button
               onClick={() => markAllAsRead.mutate()}
               disabled={markAllAsRead.isPending}
