@@ -116,4 +116,29 @@ export class NotificationListener {
       message: `You are now the owner of "${groupName}"`,
     });
   }
+
+  @OnEvent(ChatEvents.CONVERSATION_DELETED)
+  async handleConversationDeleted(payload: any) {
+    const groupName = payload.conversationName || 'Group';
+    const otherParticipants = (payload.participants as string[]).filter(
+      (id) => id !== payload.deletedBy,
+    );
+
+    await Promise.all(
+      otherParticipants.map((userId: string) =>
+        this.notificationService
+          .create({
+            userId,
+            type: 'system',
+            relatedConversation: payload.conversationId,
+            message: `"${groupName}" was deleted by the owner`,
+          })
+          .catch((error) => {
+            this.logger?.error?.(
+              `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
+            );
+          }),
+      ),
+    );
+  }
 }

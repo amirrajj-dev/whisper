@@ -1271,7 +1271,9 @@ export class ChatService {
 
         this.eventEmitter.emit(ChatEvents.CONVERSATION_DELETED, {
           conversationId,
+          conversationName: conversation.name || 'Group',
           deletedBy: currentUserId,
+          participants: deleteParticipants,
         });
       } catch (err) {
         await session.abortTransaction();
