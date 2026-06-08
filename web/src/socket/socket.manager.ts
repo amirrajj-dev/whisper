@@ -146,11 +146,10 @@ class SocketManager {
     });
   }
 
-  markAsRead(conversationId: string, messageId: string): void {
+  markAsRead(conversationId: string): void {
     if (!this.socket?.connected) return;
     (this.socket as unknown as Socket).emit("message:read", {
       conversationId,
-      messageId,
     });
   }
 

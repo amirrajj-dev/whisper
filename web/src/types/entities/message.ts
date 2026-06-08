@@ -13,6 +13,7 @@ export interface Message {
   edited: boolean;
   deleted: boolean;
   deliveredTo: string[];
+  readBy: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -101,12 +101,12 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   }, [conversationId]);
 
   useEffect(() => {
-    if (!conversationId || !latestMessageId || !messagesData?.pages?.length) return;
+    if (!conversationId || !messagesData?.pages?.length) return;
     const timer = setTimeout(() => {
-      socketManager.markAsRead(conversationId, latestMessageId);
+      socketManager.markAsRead(conversationId);
     }, 500);
     return () => clearTimeout(timer);
-  }, [conversationId, latestMessageId, messagesData?.pages?.length]);
+  }, [conversationId, messagesData?.pages?.length]);
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;

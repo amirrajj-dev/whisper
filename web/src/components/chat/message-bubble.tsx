@@ -861,22 +861,44 @@ export function MessageBubble({
                   {format(new Date(message.createdAt), "HH:mm")}
                 </span>
                 {isOwn && !message.deleted && (
-                  <span className="text-[10px]">
-                    {message.deliveredTo && message.deliveredTo.length > 1 ? (
-                      <svg
-                        className="w-3.5 h-3.5 text-primary-content/50"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z" />
-                      </svg>
+                  <span className="inline-flex items-center text-[10px]">
+                    {message.readBy && message.readBy.length > 0 ? (
+                      <span className="relative w-4 h-3.5 text-info">
+                        <svg
+                          className="absolute left-0 top-0 w-3 h-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
+                        <svg
+                          className="absolute left-[5px] top-0 w-3 h-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
+                      </span>
+                    ) : message.deliveredTo && message.deliveredTo.length > 1 ? (
+                      <span className="relative w-4 h-3.5 text-primary-content/70">
+                        <svg
+                          className="absolute left-0 top-0 w-3 h-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
+                        <svg
+                          className="absolute left-[5px] top-0 w-3 h-3"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
+                      </span>
                     ) : (
-                      <svg
-                        className="w-3.5 h-3.5 text-primary-content/40"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z" />
+                      <svg className="w-3 h-3 text-primary-content/40" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                       </svg>
                     )}
                   </span>

@@ -9,6 +9,7 @@ export interface ServerToClientEvents {
   'message:edited': (data: MessageEditedPayload) => void;
   'message:deleted': (data: MessageDeletedPayload) => void;
   'message:read': (data: MessageReadPayload) => void;
+  'messages:read': (data: MessagesReadPayload) => void;
   'conversation:new': (data: ConversationNewPayload) => void;
   'conversation:updated': (data: ConversationUpdatedPayload) => void;
   'conversation:deleted': (data: ConversationDeletedPayload) => void;
@@ -25,7 +26,7 @@ export interface ClientToServerEvents {
   'leave:conversation': (data: { conversationId: string }) => void;
   'typing:start': (data: { conversationId: string }) => void;
   'typing:stop': (data: { conversationId: string }) => void;
-  'message:read': (data: { conversationId: string; messageId: string }) => void;
+  'message:read': (data: { conversationId: string }) => void;
 }
 
 export interface UserOnlinePayload {
@@ -78,6 +79,12 @@ export interface MessageReadPayload {
   userId: string;
   conversationId: string;
   messageId: string;
+  readAt: string;
+}
+
+export interface MessagesReadPayload {
+  userId: string;
+  conversationId: string;
   readAt: string;
 }
 

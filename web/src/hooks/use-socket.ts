@@ -14,6 +14,7 @@ import type {
   MessageEditedPayload,
   MessageDeletedPayload,
   MessageReadPayload,
+  MessagesReadPayload,
   ConversationUpdatedPayload,
   ConversationDeletedPayload,
   ConversationNewPayload,
@@ -161,6 +162,7 @@ export function useSocket() {
           edited: messagePayload?.edited === true,
           deleted: false,
           deliveredTo: [],
+          readBy: [],
           createdAt: (messagePayload?.createdAt as string) || new Date().toISOString(),
           updatedAt: (messagePayload?.updatedAt as string) || new Date().toISOString(),
         };
@@ -180,6 +182,9 @@ export function useSocket() {
           }
           if (messagePayload.deliveredTo) {
             newMessage.deliveredTo = messagePayload.deliveredTo as string[];
+          }
+          if (messagePayload.readBy) {
+            newMessage.readBy = messagePayload.readBy as string[];
           }
         }
 
@@ -223,8 +228,12 @@ export function useSocket() {
       });
 
       const currentActiveId = useChatStore.getState().activeConversationId;
-      if (data.senderId !== user?._id && data.conversationId !== currentActiveId) {
-        incrementConvUnread(data.conversationId);
+      if (data.senderId !== user?._id) {
+        if (data.conversationId === currentActiveId) {
+          socketManager.markAsRead(data.conversationId);
+        } else {
+          incrementConvUnread(data.conversationId);
+        }
       }
     });
 
@@ -293,6 +302,33 @@ export function useSocket() {
                     }
                   : msg,
               ),
+            })),
+          };
+        },
+      );
+    });
+
+    registerEvent("messages:read", (data: MessagesReadPayload) => {
+      const queryKey = ["messages", data.conversationId];
+
+      queryClient.setQueryData<InfiniteData<{ messages: Message[] }>>(
+        queryKey,
+        (old) => {
+          if (!old?.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              messages: page.messages.map((msg) => {
+                const senderId = typeof msg.senderId === "string" ? msg.senderId : msg.senderId?._id;
+                if (senderId === data.userId) return msg;
+                return {
+                  ...msg,
+                  readBy: msg.readBy
+                    ? [...new Set([...msg.readBy, data.userId])]
+                    : [data.userId],
+                };
+              }),
             })),
           };
         },
