@@ -135,7 +135,7 @@ function AddParticipantsModal({
                   placeholder="Search users..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="input input-bordered input-sm w-full pl-9 text-sm"
+                  className="input outline-none input-sm w-full pl-9 text-sm"
                   autoFocus
                 />
               </div>
@@ -400,7 +400,7 @@ export function GroupDetailsModal({ isOpen, onClose, conversation }: GroupDetail
                         type="text"
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
-                        className="input input-bordered input-sm text-center text-sm"
+                        className="input outline-none input-sm text-center text-sm"
                         autoFocus
                         maxLength={100}
                       />

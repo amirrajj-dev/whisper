@@ -122,7 +122,7 @@ export function Showcase() {
 
               <div className="p-3 border-t border-base-300">
                 <div className="flex gap-2">
-                  <input type="text" placeholder="Type a message..." className="input input-bordered input-sm flex-1" disabled />
+                  <input type="text" placeholder="Type a message..." className="input outline-none input-sm flex-1" disabled />
                   <button className="btn btn-primary btn-sm" disabled>Send</button>
                 </div>
               </div>

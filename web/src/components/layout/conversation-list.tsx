@@ -83,7 +83,7 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
             placeholder="Search conversations..."
             value={conversationsSearch}
             onChange={(e) => setConversationsSearch(e.target.value)}
-            className="input input-bordered input-sm w-full pl-9 pr-8 text-sm"
+            className="input outline-none input-sm w-full pl-9 pr-8 text-sm"
           />
           {conversationsSearch && (
             <button

@@ -139,7 +139,7 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   {...register('username')}
-                  className={`input input-bordered w-full ${errors.username ? 'input-error' : ''}`}
+                  className={`input outline-none w-full ${errors.username ? 'input-error' : ''}`}
                 />
                 {errors.username && (
                   <p className="text-error text-xs mt-1">{errors.username.message}</p>
@@ -153,7 +153,7 @@ export default function ProfilePage() {
                 <input
                   type="email"
                   {...register('email')}
-                  className={`input input-bordered w-full ${errors.email ? 'input-error' : ''}`}
+                  className={`input outline-none w-full ${errors.email ? 'input-error' : ''}`}
                 />
                 {errors.email && (
                   <p className="text-error text-xs mt-1">{errors.email.message}</p>

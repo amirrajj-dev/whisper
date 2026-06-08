@@ -219,7 +219,7 @@ export function NewConversationModal({
                         value={groupName}
                         onChange={(e) => setGroupName(e.target.value)}
                         placeholder="Group name"
-                        className="input input-bordered w-full pl-9 text-sm"
+                        className="input outline-none w-full pl-9 text-sm"
                         maxLength={100}
                       />
                     </div>
@@ -234,7 +234,7 @@ export function NewConversationModal({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={tab === 'private' ? 'Search users...' : 'Add participants...'}
-                  className="input input-bordered w-full pl-9 text-sm"
+                  className="input outline-none w-full pl-9 text-sm"
                   autoFocus
                 />
               </div>
