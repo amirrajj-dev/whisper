@@ -6,8 +6,25 @@ import type { PopulatedUser } from "@/src/types/entities/user";
 import { useCurrentUser } from "@/src/hooks/use-auth";
 import { UserAvatar } from "@/src/components/common/user-avatar";
 import { format } from "date-fns";
-import { FileText, Reply, Edit3, Trash2, Download, Film, Play, Pause, Maximize2, FileArchive, FileSpreadsheet, FileType, ImageIcon, Music } from "lucide-react";
+import {
+  FileText,
+  Reply,
+  Edit3,
+  Trash2,
+  Download,
+  Film,
+  Play,
+  Pause,
+  Maximize2,
+  FileArchive,
+  FileSpreadsheet,
+  FileType,
+  ImageIcon,
+  Music,
+  Copy,
+} from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 
 interface MessageBubbleProps {
   message: Message;
@@ -16,7 +33,7 @@ interface MessageBubbleProps {
   onReply?: (message: Message) => void;
   onEdit?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
-  conversationType?: 'private' | 'group';
+  conversationType?: "private" | "group";
   conversationAdmins?: string[];
   conversationOwner?: string;
   searchQuery?: string;
@@ -42,12 +59,17 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
     return <span className="text-sm">{text}</span>;
   }
 
-  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  const parts = text.split(
+    new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"),
+  );
   return (
     <span className="text-sm">
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="bg-warning/30 text-inherit rounded-sm px-0.5">
+          <mark
+            key={i}
+            className="bg-warning/30 text-inherit rounded-sm px-0.5"
+          >
             {part}
           </mark>
         ) : (
@@ -68,61 +90,103 @@ function getFileNameFromUrl(url: string): string {
   }
 }
 
-
 const FILE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
-  pdf: { icon: FileText, color: 'text-error' },
-  doc: { icon: FileText, color: 'text-blue-500' },
-  docx: { icon: FileText, color: 'text-blue-500' },
-  xls: { icon: FileSpreadsheet, color: 'text-emerald-500' },
-  xlsx: { icon: FileSpreadsheet, color: 'text-emerald-500' },
-  zip: { icon: FileArchive, color: 'text-amber-500' },
-  rar: { icon: FileArchive, color: 'text-amber-500' },
-  '7z': { icon: FileArchive, color: 'text-amber-500' },
-  gz: { icon: FileArchive, color: 'text-amber-500' },
-  jpg: { icon: ImageIcon, color: 'text-sky-500' },
-  jpeg: { icon: ImageIcon, color: 'text-sky-500' },
-  png: { icon: ImageIcon, color: 'text-sky-500' },
-  gif: { icon: ImageIcon, color: 'text-sky-500' },
-  webp: { icon: ImageIcon, color: 'text-sky-500' },
-  svg: { icon: ImageIcon, color: 'text-sky-500' },
-  mp4: { icon: Film, color: 'text-purple-500' },
-  webm: { icon: Film, color: 'text-purple-500' },
-  mov: { icon: Film, color: 'text-purple-500' },
-  avi: { icon: Film, color: 'text-purple-500' },
-  mp3: { icon: Music, color: 'text-violet-500' },
-  wav: { icon: Music, color: 'text-violet-500' },
-  ogg: { icon: Music, color: 'text-violet-500' },
-  flac: { icon: Music, color: 'text-violet-500' },
-  txt: { icon: FileType, color: 'text-base-content/60' },
-  json: { icon: FileType, color: 'text-base-content/60' },
-  js: { icon: FileType, color: 'text-yellow-500' },
-  ts: { icon: FileType, color: 'text-blue-500' },
-  py: { icon: FileType, color: 'text-yellow-600' },
-  html: { icon: FileType, color: 'text-orange-500' },
-  css: { icon: FileType, color: 'text-blue-400' },
+  pdf: { icon: FileText, color: "text-error" },
+  doc: { icon: FileText, color: "text-blue-500" },
+  docx: { icon: FileText, color: "text-blue-500" },
+  xls: { icon: FileSpreadsheet, color: "text-emerald-500" },
+  xlsx: { icon: FileSpreadsheet, color: "text-emerald-500" },
+  zip: { icon: FileArchive, color: "text-amber-500" },
+  rar: { icon: FileArchive, color: "text-amber-500" },
+  "7z": { icon: FileArchive, color: "text-amber-500" },
+  gz: { icon: FileArchive, color: "text-amber-500" },
+  jpg: { icon: ImageIcon, color: "text-sky-500" },
+  jpeg: { icon: ImageIcon, color: "text-sky-500" },
+  png: { icon: ImageIcon, color: "text-sky-500" },
+  gif: { icon: ImageIcon, color: "text-sky-500" },
+  webp: { icon: ImageIcon, color: "text-sky-500" },
+  svg: { icon: ImageIcon, color: "text-sky-500" },
+  mp4: { icon: Film, color: "text-purple-500" },
+  webm: { icon: Film, color: "text-purple-500" },
+  mov: { icon: Film, color: "text-purple-500" },
+  avi: { icon: Film, color: "text-purple-500" },
+  mp3: { icon: Music, color: "text-violet-500" },
+  wav: { icon: Music, color: "text-violet-500" },
+  ogg: { icon: Music, color: "text-violet-500" },
+  flac: { icon: Music, color: "text-violet-500" },
+  txt: { icon: FileType, color: "text-base-content/60" },
+  json: { icon: FileType, color: "text-base-content/60" },
+  js: { icon: FileType, color: "text-yellow-500" },
+  ts: { icon: FileType, color: "text-blue-500" },
+  py: { icon: FileType, color: "text-yellow-600" },
+  html: { icon: FileType, color: "text-orange-500" },
+  css: { icon: FileType, color: "text-blue-400" },
 };
 
-function getFileInfo(filename: string): { ext: string; icon: typeof FileText; color: string; label: string } {
-  const dot = filename.lastIndexOf('.');
-  const ext = dot > 0 ? filename.slice(dot + 1).toLowerCase() : '';
+function getFileInfo(filename: string): {
+  ext: string;
+  icon: typeof FileText;
+  color: string;
+  label: string;
+} {
+  const dot = filename.lastIndexOf(".");
+  const ext = dot > 0 ? filename.slice(dot + 1).toLowerCase() : "";
   const info = FILE_ICONS[ext];
   const labelMap: Record<string, string> = {
-    pdf: 'PDF Document',
-    doc: 'Word Document', docx: 'Word Document',
-    xls: 'Spreadsheet', xlsx: 'Spreadsheet',
-    zip: 'Archive', rar: 'Archive', '7z': 'Archive', gz: 'Archive',
-    jpg: 'Image', jpeg: 'Image', png: 'Image', gif: 'Image', webp: 'Image', svg: 'Image',
-    mp4: 'Video', webm: 'Video', mov: 'Video', avi: 'Video',
-    mp3: 'Audio', wav: 'Audio', ogg: 'Audio', flac: 'Audio',
-    txt: 'Text', json: 'Data', js: 'Script', ts: 'Script', py: 'Script', html: 'Page', css: 'Stylesheet',
+    pdf: "PDF Document",
+    doc: "Word Document",
+    docx: "Word Document",
+    xls: "Spreadsheet",
+    xlsx: "Spreadsheet",
+    zip: "Archive",
+    rar: "Archive",
+    "7z": "Archive",
+    gz: "Archive",
+    jpg: "Image",
+    jpeg: "Image",
+    png: "Image",
+    gif: "Image",
+    webp: "Image",
+    svg: "Image",
+    mp4: "Video",
+    webm: "Video",
+    mov: "Video",
+    avi: "Video",
+    mp3: "Audio",
+    wav: "Audio",
+    ogg: "Audio",
+    flac: "Audio",
+    txt: "Text",
+    json: "Data",
+    js: "Script",
+    ts: "Script",
+    py: "Script",
+    html: "Page",
+    css: "Stylesheet",
   };
-  if (info) return { ext, icon: info.icon, color: info.color, label: labelMap[ext] || `${ext.toUpperCase()} File` };
-  return { ext, icon: FileText, color: 'text-primary', label: `${ext ? ext.toUpperCase() : ''} File` };
+  if (info)
+    return {
+      ext,
+      icon: info.icon,
+      color: info.color,
+      label: labelMap[ext] || `${ext.toUpperCase()} File`,
+    };
+  return {
+    ext,
+    icon: FileText,
+    color: "text-primary",
+    label: `${ext ? ext.toUpperCase() : ""} File`,
+  };
 }
 
 function FileMessageCard({ src, isOwn }: { src: string; isOwn: boolean }) {
   const fileName = getFileNameFromUrl(src);
-  const { ext, icon: Icon, color, label } = useMemo(() => getFileInfo(fileName), [fileName]);
+  const {
+    ext,
+    icon: Icon,
+    color,
+    label,
+  } = useMemo(() => getFileInfo(fileName), [fileName]);
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -135,38 +199,52 @@ function FileMessageCard({ src, isOwn }: { src: string; isOwn: boolean }) {
       onMouseLeave={() => setIsHovered(false)}
       className={`flex items-center gap-3 rounded-xl p-3 transition-all duration-200 max-w-[300px] sm:max-w-[340px] group ${
         isOwn
-          ? 'bg-primary-content/10 hover:bg-primary-content/15'
-          : 'bg-base-300/50 hover:bg-base-300/70'
-      } ${isHovered ? 'scale-[1.02]' : 'scale-100'}`}
+          ? "bg-primary-content/10 hover:bg-primary-content/15"
+          : "bg-base-300/50 hover:bg-base-300/70"
+      } ${isHovered ? "scale-[1.02]" : "scale-100"}`}
     >
       <div className="relative shrink-0">
-        <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
-          isOwn ? 'bg-primary-content/15' : 'bg-base-300/70'
-        }`}>
+        <div
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+            isOwn ? "bg-primary-content/15" : "bg-base-300/70"
+          }`}
+        >
           <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
         </div>
         {ext && (
-          <span className={`absolute -top-1.5 -right-1.5 px-1 py-0.5 rounded-md text-[9px] font-bold uppercase leading-tight shadow-sm ${
-            isOwn ? 'bg-primary text-primary-content' : 'bg-base-100 text-base-content'
-          }`}>
+          <span
+            className={`absolute -top-1.5 -right-1.5 px-1 py-0.5 rounded-md text-[9px] font-bold uppercase leading-tight shadow-sm ${
+              isOwn
+                ? "bg-primary text-primary-content"
+                : "bg-base-100 text-base-content"
+            }`}
+          >
             {ext}
           </span>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${isOwn ? 'text-primary-content/90' : 'text-base-content/90'}`}>
+        <p
+          className={`text-sm font-medium truncate ${isOwn ? "text-primary-content/90" : "text-base-content/90"}`}
+        >
           {fileName}
         </p>
-        <p className={`text-xs mt-0.5 ${isOwn ? 'text-primary-content/50' : 'text-base-content/40'}`}>
+        <p
+          className={`text-xs mt-0.5 ${isOwn ? "text-primary-content/50" : "text-base-content/40"}`}
+        >
           {label}
         </p>
       </div>
 
-      <div className={`shrink-0 transition-all duration-200 ${
-        isHovered ? 'opacity-100 scale-110' : 'opacity-40 scale-100'
-      }`}>
-        <Download className={`w-5 h-5 ${isOwn ? 'text-primary-content/70' : 'text-primary'}`} />
+      <div
+        className={`shrink-0 transition-all duration-200 ${
+          isHovered ? "opacity-100 scale-110" : "opacity-40 scale-100"
+        }`}
+      >
+        <Download
+          className={`w-5 h-5 ${isOwn ? "text-primary-content/70" : "text-primary"}`}
+        />
       </div>
     </a>
   );
@@ -185,22 +263,24 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
     const v = videoRef.current;
     if (!v) return;
     const onTime = () => setCurrentTime(v.currentTime);
-    const onDur = () => { if (v.duration && isFinite(v.duration)) setDuration(v.duration); };
+    const onDur = () => {
+      if (v.duration && isFinite(v.duration)) setDuration(v.duration);
+    };
     const onEnd = () => setIsPlaying(false);
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    v.addEventListener('timeupdate', onTime);
-    v.addEventListener('durationchange', onDur);
-    v.addEventListener('ended', onEnd);
-    v.addEventListener('play', onPlay);
-    v.addEventListener('pause', onPause);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("durationchange", onDur);
+    v.addEventListener("ended", onEnd);
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
     if (v.readyState >= 1 && v.duration) onDur();
     return () => {
-      v.removeEventListener('timeupdate', onTime);
-      v.removeEventListener('durationchange', onDur);
-      v.removeEventListener('ended', onEnd);
-      v.removeEventListener('play', onPlay);
-      v.removeEventListener('pause', onPause);
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("durationchange", onDur);
+      v.removeEventListener("ended", onEnd);
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
     };
   }, []);
 
@@ -217,15 +297,21 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
     if (videoRef.current) videoRef.current.playbackRate = PLAYBACK_SPEEDS[next];
   }, [speedIdx, PLAYBACK_SPEEDS]);
 
-  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const v = videoRef.current;
-    const bar = progressRef.current;
-    if (!v || !bar || !duration) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    v.currentTime = ratio * duration;
-    setCurrentTime(v.currentTime);
-  }, [duration]);
+  const seek = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const v = videoRef.current;
+      const bar = progressRef.current;
+      if (!v || !bar || !duration) return;
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(
+        0,
+        Math.min(1, (e.clientX - rect.left) / rect.width),
+      );
+      v.currentTime = ratio * duration;
+      setCurrentTime(v.currentTime);
+    },
+    [duration],
+  );
 
   const toggleFullscreen = useCallback(async () => {
     const v = videoRef.current;
@@ -240,16 +326,18 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const fmt = (s: number) => {
-    if (!s || !isFinite(s)) return '0:00';
+    if (!s || !isFinite(s)) return "0:00";
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className={`max-w-[300px] sm:max-w-[340px] rounded-xl overflow-hidden ${
-      isOwn ? 'bg-primary/10' : 'bg-base-300/40'
-    }`}>
+    <div
+      className={`max-w-[300px] sm:max-w-[340px] rounded-xl overflow-hidden ${
+        isOwn ? "bg-primary/10" : "bg-base-300/40"
+      }`}
+    >
       <div className="relative group cursor-pointer" onClick={togglePlay}>
         <video
           ref={videoRef}
@@ -277,7 +365,7 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
 
         <div
           className={`absolute bottom-1.5 inset-x-2 h-0.5 rounded-full overflow-hidden ${
-            isPlaying ? 'opacity-100' : 'opacity-0'
+            isPlaying ? "opacity-100" : "opacity-0"
           } transition-opacity duration-300`}
         >
           <div
@@ -287,11 +375,15 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
         </div>
       </div>
 
-      <div className={`flex items-center gap-2 px-3 py-2 ${
-        isOwn ? 'text-primary-content' : 'text-base-content'
-      }`}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 ${
+          isOwn ? "text-primary-content" : "text-base-content"
+        }`}
+      >
         <Film className="w-4 h-4 shrink-0 opacity-50" />
-        <span className="text-xs font-medium opacity-60">{fmt(isPlaying || currentTime > 0 ? currentTime : duration)}</span>
+        <span className="text-xs font-medium opacity-60">
+          {fmt(isPlaying || currentTime > 0 ? currentTime : duration)}
+        </span>
         <div className="flex-1" />
 
         <button
@@ -305,7 +397,7 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
         <button
           onClick={cycleSpeed}
           className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 ${
-            speedIdx !== 1 ? 'opacity-100 font-extrabold' : 'opacity-50'
+            speedIdx !== 1 ? "opacity-100 font-extrabold" : "opacity-50"
           }`}
         >
           {PLAYBACK_SPEEDS[speedIdx]}x
@@ -316,12 +408,12 @@ function VideoMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
         ref={progressRef}
         onClick={seek}
         className={`relative h-1 cursor-pointer overflow-hidden ${
-          isOwn ? 'bg-primary-content/10' : 'bg-base-content/10'
+          isOwn ? "bg-primary-content/10" : "bg-base-content/10"
         }`}
       >
         <div
           className={`absolute inset-y-0 left-0 transition-all duration-100 ${
-            isOwn ? 'bg-primary-content/60' : 'bg-primary/50'
+            isOwn ? "bg-primary-content/60" : "bg-primary/50"
           }`}
           style={{ width: `${progress}%` }}
         />
@@ -340,7 +432,10 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
   const PLAYBACK_SPEEDS = useMemo(() => [0.5, 1, 1.5, 2], []);
 
   const barHeights = useMemo(
-    () => [15, 22, 30, 40, 52, 62, 70, 65, 55, 42, 30, 20, 15, 22, 35, 48, 60, 72, 78, 68, 55, 38, 25, 16, 20, 35, 50, 62, 52, 28],
+    () => [
+      15, 22, 30, 40, 52, 62, 70, 65, 55, 42, 30, 20, 15, 22, 35, 48, 60, 72,
+      78, 68, 55, 38, 25, 16, 20, 35, 50, 62, 52, 28,
+    ],
     [],
   );
 
@@ -348,24 +443,33 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => setCurrentTime(audio.currentTime);
-    const onDur = () => { if (audio.duration && isFinite(audio.duration)) setDuration(audio.duration); };
+    const onDur = () => {
+      if (audio.duration && isFinite(audio.duration))
+        setDuration(audio.duration);
+    };
     const onEnd = () => setIsPlaying(false);
-    audio.addEventListener('timeupdate', onTime);
-    audio.addEventListener('durationchange', onDur);
-    audio.addEventListener('ended', onEnd);
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("durationchange", onDur);
+    audio.addEventListener("ended", onEnd);
     if (audio.readyState >= 1 && audio.duration) onDur();
     return () => {
-      audio.removeEventListener('timeupdate', onTime);
-      audio.removeEventListener('durationchange', onDur);
-      audio.removeEventListener('ended', onEnd);
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("durationchange", onDur);
+      audio.removeEventListener("ended", onEnd);
     };
   }, []);
 
   const togglePlay = useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
-    if (isPlaying) { a.pause(); setIsPlaying(false); }
-    else { a.play().then(() => setIsPlaying(true)).catch(() => {}); }
+    if (isPlaying) {
+      a.pause();
+      setIsPlaying(false);
+    } else {
+      a.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    }
   }, [isPlaying]);
 
   const cycleSpeed = useCallback(() => {
@@ -374,35 +478,43 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
     if (audioRef.current) audioRef.current.playbackRate = PLAYBACK_SPEEDS[next];
   }, [speedIdx, PLAYBACK_SPEEDS]);
 
-  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const a = audioRef.current;
-    const bar = progressRef.current;
-    if (!a || !bar || !duration) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    a.currentTime = ratio * duration;
-    setCurrentTime(a.currentTime);
-  }, [duration]);
+  const seek = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const a = audioRef.current;
+      const bar = progressRef.current;
+      if (!a || !bar || !duration) return;
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(
+        0,
+        Math.min(1, (e.clientX - rect.left) / rect.width),
+      );
+      a.currentTime = ratio * duration;
+      setCurrentTime(a.currentTime);
+    },
+    [duration],
+  );
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const fmt = (s: number) => {
-    if (!s || !isFinite(s)) return '0:00';
+    if (!s || !isFinite(s)) return "0:00";
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className={`flex items-center gap-2 min-w-[220px] sm:min-w-[280px] ${isOwn ? 'text-primary-content' : 'text-base-content'}`}>
+    <div
+      className={`flex items-center gap-2 min-w-[220px] sm:min-w-[280px] ${isOwn ? "text-primary-content" : "text-base-content"}`}
+    >
       <audio ref={audioRef} src={src} preload="metadata" />
 
       <button
         onClick={togglePlay}
         className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${
           isOwn
-            ? 'bg-primary-content/15 hover:bg-primary-content/25 text-primary-content'
-            : 'bg-primary/10 hover:bg-primary/20 text-primary'
+            ? "bg-primary-content/15 hover:bg-primary-content/25 text-primary-content"
+            : "bg-primary/10 hover:bg-primary/20 text-primary"
         }`}
       >
         {isPlaying ? (
@@ -423,11 +535,11 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
                 backgroundColor: isOwn
                   ? isPlaying
                     ? `rgba(255,255,255,${0.2 + Math.abs(Math.sin(Date.now() * 0.003 + i * 0.4)) * 0.5})`
-                    : 'rgba(255,255,255,0.25)'
+                    : "rgba(255,255,255,0.25)"
                   : isPlaying
                     ? `rgba(0,0,0,${0.15 + Math.abs(Math.sin(Date.now() * 0.003 + i * 0.4)) * 0.4})`
-                    : 'rgba(0,0,0,0.15)',
-                transformOrigin: 'bottom',
+                    : "rgba(0,0,0,0.15)",
+                transformOrigin: "bottom",
               }}
             />
           ))}
@@ -437,12 +549,12 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
           ref={progressRef}
           onClick={seek}
           className={`relative h-1 rounded-full cursor-pointer overflow-hidden ${
-            isOwn ? 'bg-primary-content/20' : 'bg-base-content/15'
+            isOwn ? "bg-primary-content/20" : "bg-base-content/15"
           }`}
         >
           <div
             className={`absolute inset-y-0 left-0 rounded-full transition-all duration-100 ${
-              isOwn ? 'bg-primary-content/70' : 'bg-primary/60'
+              isOwn ? "bg-primary-content/70" : "bg-primary/60"
             }`}
             style={{ width: `${progress}%` }}
           />
@@ -455,8 +567,8 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
           <button
             onClick={cycleSpeed}
             className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded transition-opacity hover:opacity-100 ${
-              speedIdx !== 1 ? 'opacity-100 font-extrabold' : 'opacity-50'
-            } ${isOwn ? 'text-primary-content/80' : 'text-base-content/60'}`}
+              speedIdx !== 1 ? "opacity-100 font-extrabold" : "opacity-50"
+            } ${isOwn ? "text-primary-content/80" : "text-base-content/60"}`}
           >
             {PLAYBACK_SPEEDS[speedIdx]}x
           </button>
@@ -466,7 +578,15 @@ function VoiceMessagePlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
   );
 }
 
-function MessageContent({ message, searchQuery, isOwn }: { message: Message; searchQuery?: string; isOwn: boolean }) {
+function MessageContent({
+  message,
+  searchQuery,
+  isOwn,
+}: {
+  message: Message;
+  searchQuery?: string;
+  isOwn: boolean;
+}) {
   if (message.deleted) {
     return (
       <span className="italic text-primary-content text-xs">
@@ -515,16 +635,94 @@ export function MessageBubble({
   searchQuery,
 }: MessageBubbleProps) {
   const { user } = useCurrentUser();
-  const [showActions, setShowActions] = useState(false);
   const isOwn = getSenderId(message.senderId) === user?._id;
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    if (contextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [contextMenu]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    };
+    checkMobile();
+  }, []);
+
+  const handleOpenMenu = (
+    e: React.MouseEvent | React.TouchEvent,
+    clientX: number,
+    clientY: number,
+  ) => {
+    e.preventDefault();
+    setContextMenu({ x: clientX, y: clientY });
+    setTimeout(() => {
+      if (menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let adjustedX = e.clientX;
+        let adjustedY = e.clientY;
+
+        // Horizontal adjustment
+        if (adjustedX + rect.width > viewportWidth) {
+          adjustedX = viewportWidth - rect.width - 10;
+        }
+        if (adjustedX < 0) {
+          adjustedX = 10;
+        }
+
+        // Vertical adjustment
+        if (adjustedY + rect.height > viewportHeight) {
+          adjustedY = viewportHeight - rect.height - 10;
+        }
+        if (adjustedY < 0) {
+          adjustedY = 10;
+        }
+
+        // If menu would overlap cursor, shift it slightly
+        const cursorRect = { x: e.clientX, y: e.clientY, width: 5, height: 20 };
+        if (Math.abs(adjustedX - cursorRect.x) < 20) {
+          adjustedX = isOwn ? adjustedX - rect.width - 10 : adjustedX + 20;
+        }
+
+        setContextMenu({ x: adjustedX, y: adjustedY });
+      }
+    }, 0);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast.success("Message copied");
+    } catch {
+      toast.error("Failed to copy message");
+    }
+    setContextMenu(null);
+  };
 
   const canDelete =
     isOwn ||
-    (conversationType === 'group' &&
+    (conversationType === "group" &&
       (conversationOwner === user?._id ||
-        conversationAdmins?.includes(user?._id || '')));
+        conversationAdmins?.includes(user?._id || "")));
 
-  const canEdit = isOwn && message.type === 'text';
+  const canEdit = isOwn && message.type === "text";
 
   const replyToData = message.replyTo as {
     _id: string;
@@ -553,8 +751,6 @@ export function MessageBubble({
       className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""} ${
         isGrouped ? "mt-0.5" : "mt-3"
       } group`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
       {showAvatar ? (
         <UserAvatar
@@ -568,6 +764,7 @@ export function MessageBubble({
       )}
 
       <div
+        ref={bubbleRef}
         className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}
       >
         {!isGrouped && !isOwn && (
@@ -587,6 +784,10 @@ export function MessageBubble({
                   ? "bg-primary rounded-br-none text-primary-content"
                   : "bg-base-200 rounded-bl-none text-base-content"
               }`}
+              onContextMenu={(e)=>handleOpenMenu(e , e.clientX , e.clientY)}
+              onClick={(e) =>
+                isMobile && handleOpenMenu(e, e.clientX, e.clientY)
+              }
             >
               <div
                 className={`p-1.5 rounded mb-1.5 ${
@@ -605,7 +806,11 @@ export function MessageBubble({
               </div>
 
               <div>
-                <MessageContent message={message} searchQuery={searchQuery} isOwn={isOwn} />
+                <MessageContent
+                  message={message}
+                  searchQuery={searchQuery}
+                  isOwn={isOwn}
+                />
               </div>
             </div>
 
@@ -635,78 +840,123 @@ export function MessageBubble({
                   ? "bg-primary text-primary-content rounded-2xl rounded-tr-md"
                   : "bg-base-200 rounded-2xl rounded-tl-md"
               }`}
+              onContextMenu={(e)=>handleOpenMenu(e , e.clientX , e.clientY)}
+              onClick={(e) =>
+                isMobile && handleOpenMenu(e, e.clientX, e.clientY)
+              }
             >
-              <MessageContent message={message} searchQuery={searchQuery} isOwn={isOwn} />
+              <MessageContent
+                message={message}
+                searchQuery={searchQuery}
+                isOwn={isOwn}
+              />
               <div
                 className={`flex items-center gap-1 mt-0.5 ${
                   isOwn ? "justify-end" : "justify-start"
                 }`}
               >
-                  <span
-                    className={`text-[10px] ${isOwn ? "text-primary-content/60" : "text-base-content/40"}`}
-                  >
-                    {format(new Date(message.createdAt), "HH:mm")}
+                <span
+                  className={`text-[10px] ${isOwn ? "text-primary-content/60" : "text-base-content/40"}`}
+                >
+                  {format(new Date(message.createdAt), "HH:mm")}
+                </span>
+                {isOwn && !message.deleted && (
+                  <span className="text-[10px]">
+                    {message.deliveredTo && message.deliveredTo.length > 1 ? (
+                      <svg
+                        className="w-3.5 h-3.5 text-primary-content/50"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-3.5 h-3.5 text-primary-content/40"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z" />
+                      </svg>
+                    )}
                   </span>
-                  {isOwn && !message.deleted && (
-                    <span className="text-[10px]">
-                      {message.deliveredTo && message.deliveredTo.length > 1 ? (
-                        <svg className="w-3.5 h-3.5 text-primary-content/50" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z"/>
-                        </svg>
-                      ) : (
-                        <svg className="w-3.5 h-3.5 text-primary-content/40" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M9 19.4l-5.7-5.7 1.4-1.4L9 16.6l10-10 1.4 1.4z"/>
-                        </svg>
-                      )}
-                    </span>
-                  )}
-                  {message.edited && !message.deleted && (
-                    <span
-                      className={`text-[10px] ${isOwn ? "text-primary-content/50" : "text-base-content/30"}`}
-                    >
-                      edited
-                    </span>
-                  )}
-                </div>
+                )}
+                {message.edited && !message.deleted && (
+                  <span
+                    className={`text-[10px] ${isOwn ? "text-primary-content/50" : "text-base-content/30"}`}
+                  >
+                    edited
+                  </span>
+                )}
               </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
 
-        {/* Action Buttons */}
-        {showActions && !message.deleted && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`flex gap-0.5 mt-0.5 ${isOwn ? "flex-row-reverse" : ""}`}
-          >
-            {onReply && (
+        {/* Context Menu */}
+        {contextMenu && !message.deleted && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setContextMenu(null)}
+            />
+            <div
+              ref={menuRef}
+              className="fixed z-50 bg-base-100 rounded-xl border border-base-300 shadow-2xl py-1 min-w-[160px]"
+              style={{
+                top: contextMenu.y,
+                left: contextMenu.x,
+                maxWidth: "calc(100vw - 20px)",
+              }}
+            >
+              {onReply && (
+                <button
+                  onClick={() => {
+                    onReply(message);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-base-200 transition-colors text-left"
+                >
+                  <Reply className="w-4 h-4 text-base-content/60" />
+                  Reply
+                </button>
+              )}
+              {canEdit && onEdit && (
+                <button
+                  onClick={() => {
+                    onEdit(message);
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-base-200 transition-colors text-left"
+                >
+                  <Edit3 className="w-4 h-4 text-base-content/60" />
+                  Edit
+                </button>
+              )}
               <button
-                onClick={() => onReply(message)}
-                className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content/70"
-                title="Reply"
+                onClick={handleCopy}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-base-200 transition-colors text-left"
               >
-                <Reply className="w-3 h-3" />
+                <Copy className="w-4 h-4 text-base-content/60" />
+                Copy
               </button>
-            )}
-            {canEdit && onEdit && (
-              <button
-                onClick={() => onEdit(message)}
-                className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content/70"
-                title="Edit"
-              >
-                <Edit3 className="w-3 h-3" />
-              </button>
-            )}
-            {canDelete && onDelete && (
-              <button
-                onClick={() => onDelete(message._id)}
-                className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-error"
-                title="Delete"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
-          </motion.div>
+              {canDelete && onDelete && (
+                <>
+                  <div className="h-px bg-base-300 my-1" />
+                  <button
+                    onClick={() => {
+                      onDelete(message._id);
+                      setContextMenu(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-base-200 transition-colors text-left text-error"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
     </motion.div>
