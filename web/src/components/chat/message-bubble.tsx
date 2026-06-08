@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { Message } from "@/src/types/entities/message";
 import type { PopulatedUser } from "@/src/types/entities/user";
+import { ImageLightbox } from "@/src/components/chat/image-lightbox";
 import { useCurrentUser } from "@/src/hooks/use-auth";
 import { UserAvatar } from "@/src/components/common/user-avatar";
 import { format } from "date-fns";
@@ -587,6 +588,8 @@ function MessageContent({
   searchQuery?: string;
   isOwn: boolean;
 }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   if (message.deleted) {
     return (
       <span className="italic text-primary-content text-xs">
@@ -604,6 +607,13 @@ function MessageContent({
             alt="Shared image"
             className="max-w-[280px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
             loading="lazy"
+            onClick={() => setLightboxOpen(true)}
+          />
+          <ImageLightbox
+            src={message.content}
+            alt="Shared image"
+            isOpen={lightboxOpen}
+            onClose={() => setLightboxOpen(false)}
           />
         </div>
       );
