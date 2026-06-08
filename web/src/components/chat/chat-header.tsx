@@ -1,38 +1,64 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { Conversation } from '@/src/types/entities/conversation';
-import type { PopulatedUser } from '@/src/types/entities/user';
-import { UserAvatar } from '@/src/components/common/user-avatar';
-import { UserProfileModal } from '@/src/components/chat/user-profile-modal';
-import { GroupDetailsModal } from '@/src/components/chat/group-details-modal';
-import { useCurrentUser } from '@/src/hooks/use-auth';
-import { useDeleteConversation, useRemoveParticipant } from '@/src/hooks/use-chat';
-import { ChevronLeft, Search, X, ChevronUp, ChevronDown, MoreVertical, Shield, ShieldOff, UserPlus, Users, Crown, LogOut, Trash2, User, Info } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { formatDistanceToNow } from 'date-fns';
-import { useChatStore } from '@/src/stores/chat.store';
-import { usePresenceStore } from '@/src/stores/presence.store';
-import { userApi } from '@/src/services/user.api';
-import { useAuthStore } from '@/src/stores/auth.store';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import type { Conversation } from "@/src/types/entities/conversation";
+import type { PopulatedUser } from "@/src/types/entities/user";
+import { UserAvatar } from "@/src/components/common/user-avatar";
+import { UserProfileModal } from "@/src/components/chat/user-profile-modal";
+import { GroupDetailsModal } from "@/src/components/chat/group-details-modal";
+import { useCurrentUser } from "@/src/hooks/use-auth";
+import {
+  useDeleteConversation,
+  useRemoveParticipant,
+} from "@/src/hooks/use-chat";
+import {
+  ChevronLeft,
+  Search,
+  X,
+  ChevronUp,
+  ChevronDown,
+  MoreVertical,
+  Shield,
+  ShieldOff,
+  UserPlus,
+  Users,
+  Crown,
+  LogOut,
+  Trash2,
+  User,
+  Info,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
+import { useChatStore } from "@/src/stores/chat.store";
+import { usePresenceStore } from "@/src/stores/presence.store";
+import { userApi } from "@/src/services/user.api";
+import { useAuthStore } from "@/src/stores/auth.store";
+import { toast } from "sonner";
+import { createPortal } from "react-dom";
 
 interface ChatHeaderProps {
   conversation: Conversation;
   onBack?: () => void;
 }
 
-function getConversationName(conversation: Conversation, currentUserId?: string): string {
+function getConversationName(
+  conversation: Conversation,
+  currentUserId?: string,
+): string {
   if (conversation.name) return conversation.name;
   const participants = conversation.participants as PopulatedUser[];
   if (participants.length) {
     const other = participants.find((p) => p._id !== currentUserId);
-    return other?.username || 'Unknown';
+    return other?.username || "Unknown";
   }
-  return 'Unknown';
+  return "Unknown";
 }
 
-function getConversationAvatar(conversation: Conversation, currentUserId?: string): string | null {
+function getConversationAvatar(
+  conversation: Conversation,
+  currentUserId?: string,
+): string | null {
   if (conversation.avatarUrl) return conversation.avatarUrl;
   const participants = conversation.participants as PopulatedUser[];
   if (!conversation.name && participants.length) {
@@ -48,7 +74,7 @@ function getParticipantCount(conversation: Conversation): number {
 
 export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
   const { user } = useCurrentUser();
-  const isGroup = conversation.type === 'group';
+  const isGroup = conversation.type === "group";
   const name = getConversationName(conversation, user?._id);
   const avatar = getConversationAvatar(conversation, user?._id);
   const participants = conversation.participants as PopulatedUser[];
@@ -71,6 +97,10 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
   } = useChatStore();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [blockedOverride, setBlockedOverride] = useState<boolean | null>(null);
@@ -85,56 +115,66 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
     return (user.blockedUsers ?? []).includes(otherParticipant._id);
   }, [otherParticipant, user]);
 
-  const isBlocked = blockedOverride !== null ? blockedOverride : blockedFromUser;
+  const isBlocked =
+    blockedOverride !== null ? blockedOverride : blockedFromUser;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
     if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDropdown]);
 
   const handleSearchInputKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         clearSearch();
         return;
       }
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         if (searchMatchIds.length === 0) return;
-        const nextIndex =
-          e.shiftKey
-            ? (searchActiveMatchIndex - 1 + searchMatchIds.length) % searchMatchIds.length
-            : (searchActiveMatchIndex + 1) % searchMatchIds.length;
+        const nextIndex = e.shiftKey
+          ? (searchActiveMatchIndex - 1 + searchMatchIds.length) %
+            searchMatchIds.length
+          : (searchActiveMatchIndex + 1) % searchMatchIds.length;
         setSearchActiveMatchIndex(nextIndex);
         const matchId = searchMatchIds[nextIndex];
         if (matchId) {
           const el = document.getElementById(`msg-${matchId}`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el?.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
     },
-    [searchMatchIds, searchActiveMatchIndex, setSearchActiveMatchIndex, clearSearch],
+    [
+      searchMatchIds,
+      searchActiveMatchIndex,
+      setSearchActiveMatchIndex,
+      clearSearch,
+    ],
   );
 
   const handleSearchNav = useCallback(
-    (direction: 'up' | 'down') => {
+    (direction: "up" | "down") => {
       if (searchMatchIds.length === 0) return;
       const nextIndex =
-        direction === 'down'
+        direction === "down"
           ? (searchActiveMatchIndex + 1) % searchMatchIds.length
-          : (searchActiveMatchIndex - 1 + searchMatchIds.length) % searchMatchIds.length;
+          : (searchActiveMatchIndex - 1 + searchMatchIds.length) %
+            searchMatchIds.length;
       setSearchActiveMatchIndex(nextIndex);
       const matchId = searchMatchIds[nextIndex];
       if (matchId) {
         const el = document.getElementById(`msg-${matchId}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     },
     [searchMatchIds, searchActiveMatchIndex, setSearchActiveMatchIndex],
@@ -154,21 +194,23 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
             blockedUsers: [...authUser.blockedUsers, otherParticipant._id],
           });
         }
-        toast.success('User blocked');
+        toast.success("User blocked");
       } else {
         await userApi.unblockUser(otherParticipant._id);
         if (authUser) {
           useAuthStore.getState().setUser({
             ...authUser,
-            blockedUsers: authUser.blockedUsers.filter((id) => id !== otherParticipant._id),
+            blockedUsers: authUser.blockedUsers.filter(
+              (id) => id !== otherParticipant._id,
+            ),
           });
         }
-        toast.success('User unblocked');
+        toast.success("User unblocked");
       }
     } catch (err: unknown) {
       setBlockedOverride(!newBlocked);
       const error = err as { message?: string };
-      toast.error(error.message || 'Failed to update block status');
+      toast.error(error.message || "Failed to update block status");
     }
     setShowDropdown(false);
   }, [otherParticipant, isBlocked]);
@@ -180,6 +222,35 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
       setShowProfileModal(true);
     }
   }, [isGroup]);
+
+  const handleOpenDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (showDropdown) {
+      setShowDropdown(false);
+      setDropdownPosition(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+      setShowDropdown(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleClose = () => {
+      setShowDropdown(false);
+      setDropdownPosition(null);
+    };
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+    };
+  }, [showDropdown]);
 
   if (isSearchActive) {
     return (
@@ -212,17 +283,17 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
             <span>
               {searchMatchIds.length > 0
                 ? `${searchActiveMatchIndex + 1} of ${searchMatchIds.length}`
-                : '0 results'}
+                : "0 results"}
             </span>
             <button
-              onClick={() => handleSearchNav('up')}
+              onClick={() => handleSearchNav("up")}
               className="btn btn-ghost btn-xs btn-square"
               aria-label="Previous match"
             >
               <ChevronUp className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleSearchNav('down')}
+              onClick={() => handleSearchNav("down")}
               className="btn btn-ghost btn-xs btn-square"
               aria-label="Next match"
             >
@@ -264,7 +335,13 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
             onClick={handleClickHeader}
             className="flex items-center gap-2 lg:gap-3 min-w-0 flex-1 text-left"
           >
-            <UserAvatar src={avatar} alt={name} size="md" isOnline={isOnline} showIndicator={!isGroup} />
+            <UserAvatar
+              src={avatar}
+              alt={name}
+              size="md"
+              isOnline={isOnline}
+              showIndicator={!isGroup}
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm truncate">{name}</span>
@@ -277,16 +354,26 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
               </div>
               <p className="text-xs text-base-content/40 truncate min-h-[16px]">
                 {(() => {
-                  const typingUsersList = !isGroup && conversation?._id ? typingUsers[conversation._id] : undefined;
+                  const typingUsersList =
+                    !isGroup && conversation?._id
+                      ? typingUsers[conversation._id]
+                      : undefined;
                   if (typingUsersList?.length) {
-                    const names = typingUsersList.map((u) => u.username).filter(Boolean);
-                    const text = names.length === 1 ? `${names[0]} is typing...` : `${names.length} people are typing...`;
+                    const names = typingUsersList
+                      .map((u) => u.username)
+                      .filter(Boolean);
+                    const text =
+                      names.length === 1
+                        ? `${names[0]} is typing...`
+                        : `${names.length} people are typing...`;
                     return <span className="text-success">{text}</span>;
                   }
-                  if (isGroup) return `${getParticipantCount(conversation)} members`;
-                  if (isOnline) return 'Online';
-                  if (otherParticipantLastSeen) return `Last seen ${formatDistanceToNow(new Date(otherParticipantLastSeen), { addSuffix: true })}`;
-                  return '';
+                  if (isGroup)
+                    return `${getParticipantCount(conversation)} members`;
+                  if (isOnline) return "Online";
+                  if (otherParticipantLastSeen)
+                    return `Last seen ${formatDistanceToNow(new Date(otherParticipantLastSeen), { addSuffix: true })}`;
+                  return "";
                 })()}
               </p>
             </div>
@@ -304,23 +391,28 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
             <Search className="w-5 h-5" />
           </button>
 
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="btn btn-ghost btn-sm btn-square text-base-content/40 hover:text-base-content/70"
-              title="More"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </button>
+          <button
+            onClick={(e) => handleOpenDropdown(e)}
+            className="btn btn-ghost btn-sm btn-square text-base-content/40 hover:text-base-content/70"
+            title="More"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
 
-            <AnimatePresence>
-              {showDropdown && (
+          {showDropdown &&
+            dropdownPosition &&
+            createPortal(
+              <AnimatePresence>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: -5 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -5 }}
                   transition={{ duration: 0.1 }}
-                  className="absolute right-0 top-full mt-1 w-56 bg-base-100 rounded-xl shadow-xl border border-base-300 overflow-hidden z-50"
+                  className="fixed w-56 bg-base-100 rounded-xl shadow-xl border border-base-300 overflow-hidden z-[9999]"
+                  style={{
+                    top: dropdownPosition.top,
+                    right: dropdownPosition.right,
+                  }}
                 >
                   <div className="py-1">
                     {!isGroup && otherParticipant && (
@@ -344,7 +436,7 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                           ) : (
                             <Shield className="w-4 h-4 text-base-content/40" />
                           )}
-                          {isBlocked ? 'Unblock User' : 'Block User'}
+                          {isBlocked ? "Unblock User" : "Block User"}
                         </button>
                       </>
                     )}
@@ -373,7 +465,8 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                             Transfer Ownership
                           </button>
                         )}
-                        {conversation.admins?.includes(user?._id || '') || conversation.owner === user?._id ? (
+                        {conversation.admins?.includes(user?._id || "") ||
+                        conversation.owner === user?._id ? (
                           <button
                             onClick={() => {
                               setShowDropdown(false);
@@ -411,9 +504,9 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                     )}
                   </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </AnimatePresence>,
+              document.body,
+            )}
         </div>
       </motion.div>
 
@@ -449,10 +542,16 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
             >
               <h3 className="font-semibold text-lg mb-2">Delete Group?</h3>
               <p className="text-sm text-base-content/60 mb-4">
-                This will permanently delete this group and all messages. This action cannot be undone.
+                This will permanently delete this group and all messages. This
+                action cannot be undone.
               </p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={() => {
                     deleteConversationMut.mutate(conversation._id, {
@@ -463,7 +562,9 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                   }}
                   className="btn btn-error btn-sm"
                 >
-                  {deleteConversationMut.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
+                  {deleteConversationMut.isPending ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : null}
                   Delete
                 </button>
               </div>
@@ -493,7 +594,12 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                 You will no longer have access to this group conversation.
               </p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowLeaveConfirm(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                <button
+                  onClick={() => setShowLeaveConfirm(false)}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={() => {
                     if (!user) return;
@@ -502,14 +608,16 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
                       {
                         onSuccess: () => {
                           setShowLeaveConfirm(false);
-                          toast.success('Left group');
+                          toast.success("Left group");
                         },
                       },
                     );
                   }}
                   className="btn btn-warning btn-sm"
                 >
-                  {removeParticipantMut.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
+                  {removeParticipantMut.isPending ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : null}
                   Leave
                 </button>
               </div>
