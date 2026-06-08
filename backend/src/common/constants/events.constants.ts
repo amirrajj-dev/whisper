@@ -3,6 +3,7 @@ export const ChatEvents = {
   MESSAGE_EDITED: 'chat.message.edited',
   MESSAGE_DELETED: 'chat.message.deleted',
   MESSAGE_READ: 'chat.message.read',
+  MESSAGES_READ: 'chat.messages.read',
   CONVERSATION_CREATED: 'chat.conversation.created',
   CONVERSATION_UPDATED: 'chat.conversation.updated',
   CONVERSATION_DELETED: 'chat.conversation.deleted',

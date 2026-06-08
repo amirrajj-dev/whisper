@@ -30,6 +30,10 @@ export class GatewayService implements OnModuleInit {
       this.handleMessageRead.bind(this),
     );
     this.eventEmitter.on(
+      ChatEvents.MESSAGES_READ,
+      this.handleMessagesRead.bind(this),
+    );
+    this.eventEmitter.on(
       ChatEvents.CONVERSATION_CREATED,
       this.handleConversationCreated.bind(this),
     );
@@ -168,6 +172,10 @@ export class GatewayService implements OnModuleInit {
 
   private handleMessageRead(data: any): void {
     this.emitToConversation(data.conversationId, 'message:read', data);
+  }
+
+  private handleMessagesRead(data: any): void {
+    this.emitToConversation(data.conversationId, 'messages:read', data);
   }
 
   private handleConversationCreated(data: any): void {

@@ -190,9 +190,9 @@ export class ChatGateway
   @SubscribeMessage('message:read')
   async handleMessageRead(
     client: Socket,
-    payload: { conversationId: string; messageId: string },
+    payload: { conversationId: string },
   ): Promise<void> {
-    if (!payload?.conversationId || !payload?.messageId) return;
+    if (!payload?.conversationId) return;
 
     const userId = client.data.user.id;
     const now = Date.now();
@@ -203,15 +203,18 @@ export class ChatGateway
 
     this.readLimiter.set(userId, now);
 
-    await this.messageModel.updateOne(
-      { _id: payload.messageId },
-      { $addToSet: { deliveredTo: userId } },
+    await this.messageModel.updateMany(
+      {
+        conversationId: payload.conversationId,
+        senderId: { $ne: userId },
+        readBy: { $ne: userId },
+      },
+      { $addToSet: { readBy: userId } },
     );
 
-    client.to(`conversation:${payload.conversationId}`).emit('message:read', {
+    client.to(`conversation:${payload.conversationId}`).emit('messages:read', {
       userId,
       conversationId: payload.conversationId,
-      messageId: payload.messageId,
       readAt: new Date().toISOString(),
     });
   }

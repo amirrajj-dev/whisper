@@ -9,6 +9,7 @@ export type Message = {
   edited: boolean;
   deleted: boolean;
   deliveredTo: string[];
+  readBy: string[];
   createdAt: Date;
   updatedAt: Date;
 };

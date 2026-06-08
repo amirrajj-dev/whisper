@@ -65,6 +65,13 @@ export class MessageModel {
   })
   deliveredTo: string[];
   @Prop({
+    type: [mongoose.Schema.Types.ObjectId],
+    required: true,
+    default: [],
+    ref: 'User',
+  })
+  readBy: string[];
+  @Prop({
     type: Date,
     required: true,
     default: Date.now,
