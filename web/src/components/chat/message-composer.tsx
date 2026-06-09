@@ -496,7 +496,7 @@ export function MessageComposer({ conversationId, onMessageSent }: MessageCompos
             onKeyDown={handleKeyDown}
             placeholder={isDragActive ? '' : isEditing ? 'Edit your message...' : 'Type a message...'}
             maxRows={5}
-            className="flex-1 resize-none bg-base-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px]"
+            className="flex-1 resize-none translate-y-1 bg-base-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px]"
             disabled={sendMutation.isPending || editMutation.isPending}
           />
         )}
