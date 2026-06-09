@@ -55,6 +55,13 @@ export class UserController {
     );
   }
 
+  @Get('me/blocked')
+  @ApiOperation({ summary: 'Get blocked users with details' })
+  @ApiResponse({ status: 200, description: 'Blocked users list' })
+  getBlockedUsers(@CurrentUser() user: Omit<User, 'password'>) {
+    return this.userService.getBlockedUsersDetails(user._id);
+  }
+
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Current user profile' })

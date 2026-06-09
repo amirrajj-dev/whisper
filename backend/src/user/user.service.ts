@@ -18,6 +18,7 @@ import { ConversationDocument } from 'src/common/schemas/conversation.schema';
 import { MessageDocument } from 'src/common/schemas/message.schema';
 import { NotificationDocument } from 'src/common/schemas/notification.schema';
 import { RefreshTokenDocument } from 'src/common/schemas/refresh-token.schema';
+import { BlockRecordDocument } from 'src/common/schemas/block-record.schema';
 import { UploadService } from 'src/upload/upload.service';
 
 @Injectable()
@@ -33,6 +34,8 @@ export class UserService {
     private notificationModel: Model<NotificationDocument>,
     @InjectModel('RefreshToken')
     private refreshTokenModel: Model<RefreshTokenDocument>,
+    @InjectModel('BlockRecord')
+    private blockRecordModel: Model<BlockRecordDocument>,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -298,6 +301,37 @@ export class UserService {
     return blockedUsers;
   }
 
+  async getBlockedUsersDetails(userId: string) {
+    try {
+      const records = await this.blockRecordModel
+        .find({ blockerId: userId as any })
+        .sort({ createdAt: -1 })
+        .populate(
+          'blockedId',
+          'username email avatarUrl bio lastSeen isDeleted',
+        )
+        .exec();
+
+      return records
+        .filter((r) => r.blockedId)
+        .map((r) => ({
+          _id: ((r.blockedId as any)._id || r.blockedId).toString(),
+          username: (r.blockedId as any).username,
+          email: (r.blockedId as any).email,
+          avatarUrl: (r.blockedId as any).avatarUrl,
+          bio: (r.blockedId as any).bio,
+          lastSeen: (r.blockedId as any).lastSeen,
+          isDeleted: (r.blockedId as any).isDeleted,
+          blockedAt: (r as any).createdAt,
+        }));
+    } catch (error) {
+      this.logger.error(
+        `Error fetching blocked users details: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  }
+
   async blockUser(currentUserId: string, targetUserId: string) {
     try {
       this.logger.log(`User ${currentUserId} blocking user ${targetUserId}`);
@@ -328,6 +362,11 @@ export class UserService {
       await this.userModel.findByIdAndUpdate(currentUserId, {
         $addToSet: { blockedUsers: new mongoose.Types.ObjectId(targetUserId) },
         updatedAt: new Date(),
+      });
+
+      await this.blockRecordModel.create({
+        blockerId: currentUserId as any,
+        blockedId: targetUserId as any,
       });
 
       try {
@@ -363,6 +402,11 @@ export class UserService {
       await this.userModel.findByIdAndUpdate(currentUserId, {
         $pull: { blockedUsers: new mongoose.Types.ObjectId(targetUserId) },
         updatedAt: new Date(),
+      });
+
+      await this.blockRecordModel.deleteOne({
+        blockerId: currentUserId,
+        blockedId: targetUserId,
       });
 
       try {
@@ -506,7 +550,9 @@ export class UserService {
       .exec();
 
     // Soft-delete only messages in group conversations
-    const groupConvIds = new Set(groupConversations.map((c) => c._id.toString()));
+    const groupConvIds = new Set(
+      groupConversations.map((c) => c._id.toString()),
+    );
     const userGroupMessages = userMessages.filter((m) =>
       groupConvIds.has(m.conversationId.toString()),
     );

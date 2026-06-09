@@ -6,6 +6,7 @@ import { useAuthStore } from "@/src/stores/auth.store";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Palette, Shield, Bell, AlertTriangle, Loader2 } from "lucide-react";
+import { BlockedUsersModal } from "@/src/components/settings/blocked-users-modal";
 import {
   useThemeStore,
   type Theme,
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
   const deleteAccountMutation = useDeleteAccount();
 
   useEffect(() => {
@@ -183,10 +185,19 @@ export default function SettingsPage() {
               ].map((label) => (
                 <div key={label} className="flex items-center justify-between">
                   <span className="text-sm">{label}</span>
-                  <button className="btn btn-ghost btn-xs">Manage</button>
+                  <button
+                    className="btn btn-ghost btn-xs"
+                    onClick={label === "Blocked users" ? () => setShowBlockedModal(true) : undefined}
+                  >
+                    Manage
+                  </button>
                 </div>
               ))}
             </div>
+            <BlockedUsersModal
+              isOpen={showBlockedModal}
+              onClose={() => setShowBlockedModal(false)}
+            />
           </div>
 
           <div className="bg-base-100 rounded-2xl border border-error/30 overflow-hidden">

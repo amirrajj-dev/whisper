@@ -236,7 +236,10 @@ export class ChatService {
 
       const conversation = await this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl bio lastSeen isDeleted')
+        .populate(
+          'participants',
+          'username email avatarUrl bio lastSeen isDeleted',
+        )
         .populate('createdBy', 'username email avatarUrl isDeleted')
         .populate('lastMessage')
         .exec();
@@ -322,7 +325,10 @@ export class ChatService {
           );
           const populated = await this.conversationModel
             .findById(existingConversation._id)
-            .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+            .populate(
+              'participants',
+              'username email avatarUrl lastSeen isDeleted',
+            )
             .populate('createdBy', 'username email avatarUrl isDeleted')
             .exec();
           const convObj = populated!.toObject();

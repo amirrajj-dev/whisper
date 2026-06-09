@@ -4,6 +4,17 @@ import type { UserListResponse, MessageResponse } from '@/src/types/api/response
 import type { UpdateUserDto } from '@/src/types/dto/user';
 import type { PaginationDto } from '@/src/types/dto/pagination';
 
+export interface BlockedUser {
+  _id: string;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+  bio?: string;
+  lastSeen?: string | null;
+  isDeleted?: boolean;
+  blockedAt: string;
+}
+
 export const userApi = {
   getUsers: (params?: PaginationDto) =>
     api.get<UserListResponse>('/users', { params }).then((r) => r.data),
@@ -30,6 +41,9 @@ export const userApi = {
 
   unblockUser: (userId: string) =>
     api.delete<{ message: string }>(`/users/${userId}/block`).then((r) => r.data),
+
+  getBlockedUsers: () =>
+    api.get<BlockedUser[]>('/users/me/blocked').then((r) => r.data),
 
   deleteMe: (password: string) =>
     api.delete<MessageResponse>('/users/me', { data: { password } }).then((r) => r.data),

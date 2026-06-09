@@ -7,6 +7,7 @@ import { ConversationSchema } from 'src/common/schemas/conversation.schema';
 import { MessageSchema } from 'src/common/schemas/message.schema';
 import { NotificationSchema } from 'src/common/schemas/notification.schema';
 import { RefreshTokenSchema } from 'src/common/schemas/refresh-token.schema';
+import { BlockRecordSchema } from 'src/common/schemas/block-record.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UploadModule } from 'src/upload/upload.module';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
@@ -19,6 +20,7 @@ import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.
       { name: 'Message', schema: MessageSchema },
       { name: 'Notification', schema: NotificationSchema },
       { name: 'RefreshToken', schema: RefreshTokenSchema },
+      { name: 'BlockRecord', schema: BlockRecordSchema },
     ]),
     forwardRef(() => AuthModule),
     UploadModule,
