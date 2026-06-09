@@ -1,10 +1,13 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Reveal } from '@/src/components/shared/reveal'
+import { useAuthStore } from '@/src/stores/auth.store'
 
 export function CTA() {
+  const { isAuthenticated } = useAuthStore()
   return (
     <section className="py-24 relative">
       <div className="container mx-auto px-4">
@@ -25,10 +28,10 @@ export function CTA() {
               <p className="text-lg text-primary-content/80 max-w-xl mx-auto mb-8">
                 Join thousands of users already experiencing the future of communication. Start chatting in minutes.
               </p>
-              <button className="btn bg-white text-primary hover:bg-white/90 border-none btn-lg gap-2 shadow-xl">
+              <Link href={isAuthenticated ? '/app' : '/register'} className="btn bg-white text-primary hover:bg-white/90 border-none btn-lg gap-2 shadow-xl">
                 Start Chatting Now
                 <ArrowRight className="w-5 h-5" />
-              </button>
+              </Link>
             </div>
           </div>
         </Reveal>

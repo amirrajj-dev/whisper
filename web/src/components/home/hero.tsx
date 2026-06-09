@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, MessageCircle, ChevronDown } from 'lucide-react'
+import { useAuthStore } from '@/src/stores/auth.store'
 
 const blobAnimation = (i: number) => ({
   scale: [1, 1.15, 1],
@@ -26,6 +27,7 @@ const scrollToFeatures = () => {
 }
 
 export function Hero() {
+  const { isAuthenticated } = useAuthStore()
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
@@ -102,7 +104,7 @@ export function Hero() {
             transition={{ delay: 0.6, duration: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link href="/app" className="btn btn-primary btn-lg gap-2">
+            <Link href={isAuthenticated ? '/app' : '/register'} className="btn btn-primary btn-lg gap-2">
               Start Chatting
               <ArrowRight className="w-5 h-5" />
             </Link>
