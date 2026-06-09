@@ -23,6 +23,7 @@ import { ChatEvents } from 'src/common/constants/events.constants';
 import { UploadService } from 'src/upload/upload.service';
 import { UserService } from 'src/user/user.service';
 import { UserDocument } from 'src/common/schemas/user.schema';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class ChatService {
@@ -36,6 +37,7 @@ export class ChatService {
     private readonly userService: UserService,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private async getConversationCacheVersion(userId: string): Promise<number> {
@@ -383,6 +385,29 @@ export class ChatService {
         conversation: populatedConversation,
       });
 
+      if (data.type === 'group') {
+        const groupName = data.name || 'Group';
+        const otherParticipants = participants.filter(
+          (id) => id !== currentUserId,
+        );
+        await Promise.all(
+          otherParticipants.map((userId) =>
+            this.notificationService
+              .create({
+                userId,
+                type: 'system',
+                relatedConversation: conversation._id.toString(),
+                message: `You were added to "${groupName}"`,
+              })
+              .catch((err) => {
+                this.logger.error(
+                  `Failed to create notification for ${userId}: ${err instanceof Error ? err.message : err}`,
+                );
+              }),
+          ),
+        );
+      }
+
       return populatedConversation;
     } catch (error) {
       this.logger.error(
@@ -478,6 +503,24 @@ export class ChatService {
         addedBy: currentUserId,
         conversation: updatedConversation,
       });
+
+      const groupName = conversation.name || 'Group';
+      await Promise.all(
+        newUserIds.map((userId) =>
+          this.notificationService
+            .create({
+              userId,
+              type: 'system',
+              relatedConversation: conversationId,
+              message: `You were added to "${groupName}"`,
+            })
+            .catch((err) => {
+              this.logger.error(
+                `Failed to create notification for ${userId}: ${err instanceof Error ? err.message : err}`,
+              );
+            }),
+        ),
+      );
 
       return updatedConversation;
     } catch (error) {

@@ -7,6 +7,7 @@ import { UserModule } from 'src/user/user.module';
 import { MessageSchema } from 'src/common/schemas/message.schema';
 import { UploadModule } from 'src/upload/upload.module';
 import { UserSchema } from 'src/common/schemas/user.schema';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserSchema } from 'src/common/schemas/user.schema';
     ]),
     UserModule,
     UploadModule,
+    NotificationModule,
   ],
   controllers: [ChatController],
   providers: [ChatService],

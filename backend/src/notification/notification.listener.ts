@@ -67,26 +67,26 @@ export class NotificationListener {
     );
   }
 
-  @OnEvent(ChatEvents.PARTICIPANT_ADDED)
-  async handleParticipantAdded(payload: any) {
-    const groupName = payload.conversationName || 'Group';
-    await Promise.all(
-      payload.newParticipants.map((userId: string) =>
-        this.notificationService
-          .create({
-            userId,
-            type: 'system',
-            relatedConversation: payload.conversationId,
-            message: `You were added to "${groupName}"`,
-          })
-          .catch((error) => {
-            this.logger?.error?.(
-              `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
-            );
-          }),
-      ),
-    );
-  }
+  // @OnEvent(ChatEvents.PARTICIPANT_ADDED)
+  // async handleParticipantAdded(payload: any) {
+  //   const groupName = payload.conversationName || 'Group';
+  //   await Promise.all(
+  //     payload.newParticipants.map((userId: string) =>
+  //       this.notificationService
+  //         .create({
+  //           userId,
+  //           type: 'system',
+  //           relatedConversation: payload.conversationId,
+  //           message: `You were added to "${groupName}"`,
+  //         })
+  //         .catch((error) => {
+  //           this.logger?.error?.(
+  //             `Failed to create notification for ${userId}: ${error instanceof Error ? error.message : error}`,
+  //           );
+  //         }),
+  //     ),
+  //   );
+  // }
 
   @OnEvent(ChatEvents.PARTICIPANT_REMOVED)
   async handleParticipantRemoved(payload: any) {
