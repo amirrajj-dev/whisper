@@ -1,7 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Server } from 'socket.io';
-import { ChatEvents, NotificationEvents } from 'src/common/constants/events.constants';
+import {
+  ChatEvents,
+  NotificationEvents,
+} from 'src/common/constants/events.constants';
 
 @Injectable()
 export class GatewayService implements OnModuleInit {
@@ -117,7 +120,10 @@ export class GatewayService implements OnModuleInit {
     return result;
   }
 
-  async isUserInConversation(userId: string, conversationId: string): Promise<boolean> {
+  async isUserInConversation(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
     if (!this.server) return false;
     const socketIds = this.userSockets.get(userId);
     if (!socketIds || socketIds.size === 0) return false;

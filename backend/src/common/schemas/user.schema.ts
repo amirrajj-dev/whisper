@@ -56,6 +56,8 @@ export class UserModel {
     default: Date.now,
   })
   lastSeen: Date;
+  @Prop({ type: Boolean, required: true, default: false })
+  isDeleted: boolean;
   @Prop({
     type: Date,
     required: true,

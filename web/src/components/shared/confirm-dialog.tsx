@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   confirmVariant?: "primary" | "error" | "warning";
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 const variantClasses: Record<string, string> = {
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   confirmLabel = "Confirm",
   confirmVariant = "primary",
   isLoading = false,
+  children,
 }: ConfirmDialogProps) {
   return (
     <AnimatePresence>
@@ -48,7 +50,8 @@ export function ConfirmDialog({
           >
             <h3 className="font-semibold text-lg mb-2">{title}</h3>
             <p className="text-sm text-base-content/60 mb-4">{message}</p>
-            <div className="flex justify-end gap-2">
+            {children}
+            <div className="flex justify-end gap-2 mt-4">
               <button onClick={onClose} className="btn btn-ghost btn-sm">Cancel</button>
               <button
                 onClick={onConfirm}

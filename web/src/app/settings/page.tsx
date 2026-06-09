@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/src/stores/auth.store";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Palette, Shield, Bell, Loader2 } from "lucide-react";
+import { ArrowLeft, Palette, Shield, Bell, AlertTriangle, Loader2 } from "lucide-react";
 import {
   useThemeStore,
   type Theme,
   themeNames,
 } from "@/src/stores/theme-store";
 import { Check } from "lucide-react";
+import { ConfirmDialog } from "@/src/components/shared/confirm-dialog";
+import { useDeleteAccount } from "@/src/hooks/use-auth";
 
 const themes: Theme[] = [
   "light",
@@ -35,6 +37,9 @@ export default function SettingsPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const deleteAccountMutation = useDeleteAccount();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -183,8 +188,69 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+
+          <div className="bg-base-100 rounded-2xl border border-error/30 overflow-hidden">
+            <div className="p-4 border-b border-error/30 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-error/10 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-error" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-sm text-error">Danger Zone</h2>
+                <p className="text-xs text-base-content/40">
+                  Irreversible actions
+                </p>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Delete account</p>
+                  <p className="text-xs text-base-content/40 mt-0.5">
+                    Permanently delete your account and all associated data. This action cannot be undone.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="btn btn-error btn-sm"
+                >
+                  Delete account
+                </button>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setDeletePassword("");
+        }}
+        onConfirm={() => {
+          if (deletePassword) {
+            deleteAccountMutation.mutate(deletePassword);
+            setShowDeleteConfirm(false);
+            setDeletePassword("");
+          }
+        }}
+        title="Delete account"
+        message="This will permanently delete your account, messages, and all associated data. Enter your password to confirm."
+        confirmLabel="Delete my account"
+        confirmVariant="error"
+        isLoading={deleteAccountMutation.isPending}
+      >
+        <div className="mt-3">
+          <input
+            type="password"
+            placeholder="Enter your password"
+            className="input outline-none input-sm w-full"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            autoFocus
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

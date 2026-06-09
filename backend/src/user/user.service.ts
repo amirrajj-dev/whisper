@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   Inject,
@@ -8,9 +9,15 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import mongoose, { Model } from 'mongoose';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
+import { ChatEvents } from 'src/common/constants/events.constants';
 import { UserDocument } from 'src/common/schemas/user.schema';
+import { ConversationDocument } from 'src/common/schemas/conversation.schema';
+import { MessageDocument } from 'src/common/schemas/message.schema';
+import { NotificationDocument } from 'src/common/schemas/notification.schema';
+import { RefreshTokenDocument } from 'src/common/schemas/refresh-token.schema';
 import { UploadService } from 'src/upload/upload.service';
 
 @Injectable()
@@ -19,7 +26,15 @@ export class UserService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel('User') private userModel: Model<UserDocument>,
+    @InjectModel('Conversation')
+    private conversationModel: Model<ConversationDocument>,
+    @InjectModel('Message') private messageModel: Model<MessageDocument>,
+    @InjectModel('Notification')
+    private notificationModel: Model<NotificationDocument>,
+    @InjectModel('RefreshToken')
+    private refreshTokenModel: Model<RefreshTokenDocument>,
     private readonly uploadService: UploadService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getUsers(
@@ -50,9 +65,12 @@ export class UserService {
 
       const [users, total] = await Promise.all([
         this.userModel
-          .find({ _id: { $ne: currentUserId } })
+          .find({
+            _id: { $ne: currentUserId },
+            isDeleted: { $ne: true },
+          })
           .select('-password -__v')
-          .populate('blockedUsers', 'username email avatarUrl')
+          .populate('blockedUsers', 'username email avatarUrl isDeleted')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
@@ -109,7 +127,7 @@ export class UserService {
     const objectId = new mongoose.Types.ObjectId(id);
     const user = await this.userModel
       .findById(objectId, '-password -__v')
-      .populate('blockedUsers', 'username email avatarUrl')
+      .populate('blockedUsers', 'username email avatarUrl isDeleted')
       .exec();
 
     if (user) {
@@ -224,7 +242,7 @@ export class UserService {
       const updatedUser = await this.userModel
         .findByIdAndUpdate(id, updateData, { returnDocument: 'after' })
         .select('-password -__v')
-        .populate('blockedUsers', 'username email avatarUrl');
+        .populate('blockedUsers', 'username email avatarUrl isDeleted');
 
       if (!updatedUser) {
         this.logger.error(`User not found after update: ${id}`);
@@ -362,5 +380,271 @@ export class UserService {
       );
       throw error;
     }
+  }
+
+  private getResourceType(messageType: string): 'image' | 'raw' | 'video' {
+    if (messageType === 'image') return 'image';
+    if (messageType === 'video' || messageType === 'voice') return 'video';
+    if (messageType === 'file') return 'raw';
+    return 'image';
+  }
+
+  async deleteAccount(
+    userId: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    this.logger.log(`Account deletion requested for user: ${userId}`);
+
+    // Find user and verify password
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid password');
+    }
+
+    // Delete avatar from Cloudinary if exists
+    if (user.publicId) {
+      try {
+        await this.uploadService.deleteFile(user.publicId, 'image');
+      } catch (err) {
+        this.logger.warn(
+          `Failed to delete avatar from Cloudinary: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    const objectId = new mongoose.Types.ObjectId(userId);
+
+    // Collect all conversations the user is in (before any modifications)
+    const allConversations = await this.conversationModel
+      .find({ participants: userId })
+      .exec();
+
+    const privateConversations = allConversations.filter(
+      (c) => c.type === 'private',
+    );
+    const groupConversations = allConversations.filter(
+      (c) => c.type === 'group',
+    );
+
+    // Handle groups where user is the owner — transfer ownership
+    const ownedGroups = groupConversations.filter(
+      (g) => g.owner?.toString() === userId,
+    );
+
+    for (const group of ownedGroups) {
+      const otherParticipants = group.participants.filter(
+        (p) => p.toString() !== userId,
+      );
+
+      if (otherParticipants.length === 0) {
+        // No other participants — delete the group entirely
+        const messages = await this.messageModel
+          .find({ conversationId: group._id })
+          .exec();
+        for (const message of messages) {
+          if (message.publicId) {
+            try {
+              await this.uploadService.deleteFile(
+                message.publicId,
+                this.getResourceType(message.type),
+              );
+            } catch {
+              // best-effort
+            }
+          }
+        }
+        await this.messageModel
+          .deleteMany({ conversationId: group._id })
+          .exec();
+        await this.conversationModel.findByIdAndDelete(group._id).exec();
+      } else {
+        // Transfer ownership to the first remaining participant
+        await this.conversationModel
+          .findByIdAndUpdate(group._id, {
+            owner: otherParticipants[0],
+            updatedAt: new Date(),
+          })
+          .exec();
+      }
+    }
+
+    // ----- PRIVATE CONVERSATIONS: delete entirely -----
+    for (const conv of privateConversations) {
+      const msgs = await this.messageModel
+        .find({ conversationId: conv._id })
+        .exec();
+      for (const msg of msgs) {
+        if (msg.publicId) {
+          try {
+            await this.uploadService.deleteFile(
+              msg.publicId,
+              this.getResourceType(msg.type),
+            );
+          } catch {
+            // best-effort
+          }
+        }
+      }
+      await this.messageModel.deleteMany({ conversationId: conv._id }).exec();
+      await this.conversationModel.findByIdAndDelete(conv._id).exec();
+
+      // Emit conversation:deleted so other participants remove it in real-time
+      this.eventEmitter.emit(ChatEvents.CONVERSATION_DELETED, {
+        conversationId: conv._id.toString(),
+        deletedBy: userId,
+      });
+    }
+
+    // ----- GROUP CONVERSATIONS: soft-delete user's messages, then remove user -----
+    const userMessages = await this.messageModel
+      .find({ senderId: userId })
+      .exec();
+
+    // Soft-delete only messages in group conversations
+    const groupConvIds = new Set(groupConversations.map((c) => c._id.toString()));
+    const userGroupMessages = userMessages.filter((m) =>
+      groupConvIds.has(m.conversationId.toString()),
+    );
+
+    for (const message of userGroupMessages) {
+      if (message.publicId) {
+        try {
+          await this.uploadService.deleteFile(
+            message.publicId,
+            this.getResourceType(message.type),
+          );
+        } catch {
+          // best-effort
+        }
+      }
+      message.deleted = true;
+      message.content = '[Account deleted]';
+      message.publicId = undefined;
+      await message.save();
+    }
+
+    // Remove user from group participants and admins
+    if (groupConversations.length > 0) {
+      await this.conversationModel
+        .updateMany(
+          { _id: { $in: groupConversations.map((c) => c._id) } },
+          {
+            $pull: {
+              participants: objectId,
+              admins: objectId,
+            },
+          },
+        )
+        .exec();
+
+      // Update lastMessage on each group
+      for (const conv of groupConversations) {
+        const latestMessage = await this.messageModel
+          .findOne({ conversationId: conv._id })
+          .sort({ createdAt: -1 })
+          .select('content type deleted createdAt')
+          .exec();
+
+        const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+        if (latestMessage) {
+          if (latestMessage.deleted) {
+            updateData.lastMessage = '[Message deleted]';
+          }
+          updateData.lastMessageAt = latestMessage.createdAt;
+        } else {
+          updateData.lastMessage = null;
+          updateData.lastMessageAt = null;
+        }
+
+        await this.conversationModel
+          .findByIdAndUpdate(conv._id, updateData)
+          .exec();
+      }
+
+      // Emit participant:removed so remaining members update in real-time
+      for (const conv of groupConversations) {
+        this.eventEmitter.emit(ChatEvents.PARTICIPANT_REMOVED, {
+          conversationId: conv._id.toString(),
+          removedUserId: userId,
+          removedBy: userId,
+        });
+      }
+    }
+
+    // ----- GENERAL CLEANUP -----
+    await this.messageModel
+      .updateMany({ deliveredTo: userId }, { $pull: { deliveredTo: userId } })
+      .exec();
+    await this.messageModel
+      .updateMany({ readBy: userId }, { $pull: { readBy: userId } })
+      .exec();
+
+    await this.notificationModel.deleteMany({ userId }).exec();
+    await this.refreshTokenModel.deleteMany({ userId }).exec();
+
+    // Remove user from admins in any remaining conversations
+    await this.conversationModel
+      .updateMany({ admins: userId }, { $pull: { admins: objectId } })
+      .exec();
+
+    // Soft-delete the user record
+    const uniqueSuffix = `${userId}_${Date.now()}`;
+    await this.userModel
+      .findByIdAndUpdate(userId, {
+        $set: {
+          isDeleted: true,
+          username: `deleted_${uniqueSuffix}`,
+          email: `deleted_${uniqueSuffix}@deleted.local`,
+          password: '',
+          bio: undefined,
+          avatarUrl: undefined,
+          publicId: undefined,
+          blockedUsers: [],
+          updatedAt: new Date(),
+        },
+      })
+      .exec();
+
+    // Invalidate conversation caches for all affected participants
+    const affectedParticipantIds = new Set<string>();
+    for (const conv of allConversations) {
+      for (const p of conv.participants) {
+        const pid = p.toString();
+        if (pid !== userId) {
+          affectedParticipantIds.add(pid);
+        }
+      }
+    }
+    for (const pid of affectedParticipantIds) {
+      try {
+        const verKey = `conv_ver:${pid}`;
+        const ver = (await this.cacheManager.get<number>(verKey)) || 0;
+        await this.cacheManager.set(verKey, ver + 1, 1000 * 60 * 5);
+      } catch {
+        this.logger.warn(
+          `Failed to invalidate conversation cache for user ${pid}`,
+        );
+      }
+    }
+
+    try {
+      await this.cacheManager.del(`user:${userId}`);
+    } catch {
+      this.logger.warn('Failed to invalidate user cache');
+    }
+    try {
+      await this.cacheManager.del(`blocked:${userId}`);
+    } catch {
+      this.logger.warn('Failed to invalidate blocked cache');
+    }
+
+    this.logger.log(`Account deleted successfully for user: ${userId}`);
+    return { message: 'Account deleted successfully' };
   }
 }

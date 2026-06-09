@@ -273,6 +273,10 @@ export class AuthService {
         this.logger.warn(`Invalid token - user not found: ${payload.sub}`);
         throw new UnauthorizedException('Invalid token');
       }
+      if (user.isDeleted) {
+        this.logger.warn(`Deleted user attempted access: ${payload.sub}`);
+        throw new UnauthorizedException('Account has been deleted');
+      }
       this.logger.debug(`User validated successfully: ${user.email}`);
       return user;
     } catch (error) {

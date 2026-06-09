@@ -1,18 +1,21 @@
 import { FileText, Film, FileArchive, FileSpreadsheet, FileType, ImageIcon, Music } from "lucide-react";
 import type { PopulatedUser } from "@/src/types/entities/user";
 
-export function getSenderName(sender: string | PopulatedUser): string {
-  if (typeof sender === "string") return "Unknown";
+export function getSenderName(sender: string | PopulatedUser | null | undefined): string {
+  if (!sender || typeof sender === "string") return "Deleted User";
+  if (sender.isDeleted) return "Deleted User";
   return sender.username;
 }
 
-export function getSenderId(sender: string | PopulatedUser): string {
+export function getSenderId(sender: string | PopulatedUser | null | undefined): string {
+  if (!sender) return "";
   if (typeof sender === "string") return sender;
   return sender._id;
 }
 
-export function getSenderAvatar(sender: string | PopulatedUser): string | undefined {
-  if (typeof sender === "string") return undefined;
+export function getSenderAvatar(sender: string | PopulatedUser | null | undefined): string | undefined {
+  if (!sender || typeof sender === "string") return undefined;
+  if (sender.isDeleted) return undefined;
   return sender.avatarUrl;
 }
 

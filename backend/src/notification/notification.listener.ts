@@ -40,8 +40,7 @@ export class NotificationListener {
 
     await Promise.all(
       otherParticipants.map(async (userId) => {
-        const activeConv =
-          this.gatewayService.getActiveConversation(userId);
+        const activeConv = this.gatewayService.getActiveConversation(userId);
         if (activeConv === conversationId) return;
 
         const isInRoom = await this.gatewayService.isUserInConversation(

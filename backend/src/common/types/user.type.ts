@@ -8,6 +8,7 @@ export type User = {
   publicId?: string;
   blockedUsers: string[];
   lastSeen: Date;
+  isDeleted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 };

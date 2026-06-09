@@ -176,13 +176,13 @@ export class ChatService {
       const [messages, total] = await Promise.all([
         this.messageModel
           .find({ conversationId })
-          .populate('senderId', 'username email avatarUrl')
+          .populate('senderId', 'username email avatarUrl isDeleted')
           .populate('replyTo', 'content type senderId')
           .populate({
             path: 'replyTo',
             populate: {
               path: 'senderId',
-              select: 'username',
+              select: 'username isDeleted',
             },
           })
           .sort({ createdAt: -1 })
@@ -234,8 +234,8 @@ export class ChatService {
 
       const conversation = await this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl bio lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl bio lastSeen isDeleted')
+        .populate('createdBy', 'username email avatarUrl isDeleted')
         .populate('lastMessage')
         .exec();
 
@@ -320,8 +320,8 @@ export class ChatService {
           );
           const populated = await this.conversationModel
             .findById(existingConversation._id)
-            .populate('participants', 'username email avatarUrl lastSeen')
-            .populate('createdBy', 'username email avatarUrl')
+            .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+            .populate('createdBy', 'username email avatarUrl isDeleted')
             .exec();
           const convObj = populated!.toObject();
           return { ...convObj, isExisting: true };
@@ -371,8 +371,8 @@ export class ChatService {
 
       const populatedConversation = await this.conversationModel
         .findById(conversation._id)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('createdBy', 'username email avatarUrl isDeleted')
         .exec();
 
       await this.invalidateConversationCacheForUsers(participants);
@@ -467,8 +467,8 @@ export class ChatService {
 
       const updatedConversation = await this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('createdBy', 'username email avatarUrl isDeleted')
         .exec();
 
       this.eventEmitter.emit(ChatEvents.PARTICIPANT_ADDED, {
@@ -565,9 +565,9 @@ export class ChatService {
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('admins', 'username email avatarUrl')
-        .populate('owner', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('admins', 'username email avatarUrl isDeleted')
+        .populate('owner', 'username email avatarUrl isDeleted')
         .exec();
     } catch (error) {
       this.logger.error(
@@ -648,9 +648,9 @@ export class ChatService {
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('admins', 'username email avatarUrl')
-        .populate('owner', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('admins', 'username email avatarUrl isDeleted')
+        .populate('owner', 'username email avatarUrl isDeleted')
         .exec();
     } catch (error) {
       this.logger.error(
@@ -725,9 +725,9 @@ export class ChatService {
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('admins', 'username email avatarUrl')
-        .populate('owner', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('admins', 'username email avatarUrl isDeleted')
+        .populate('owner', 'username email avatarUrl isDeleted')
         .exec();
     } catch (error) {
       this.logger.error(
@@ -842,7 +842,7 @@ export class ChatService {
 
       const populatedMessage = await this.messageModel
         .findById(message._id)
-        .populate('senderId', 'username email avatarUrl')
+        .populate('senderId', 'username email avatarUrl isDeleted')
         .populate('replyTo', 'content type senderId')
         .exec();
 
@@ -1039,8 +1039,8 @@ export class ChatService {
       // Return updated conversation
       return this.conversationModel
         .findById(conversationId)
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('createdBy', 'username email avatarUrl isDeleted')
         .exec();
     } catch (error) {
       this.logger.error(
@@ -1114,8 +1114,8 @@ export class ChatService {
         .findByIdAndUpdate(conversationId, updateData, {
           returnDocument: 'after',
         })
-        .populate('participants', 'username email avatarUrl lastSeen')
-        .populate('createdBy', 'username email avatarUrl')
+        .populate('participants', 'username email avatarUrl lastSeen isDeleted')
+        .populate('createdBy', 'username email avatarUrl isDeleted')
         .exec();
 
       this.logger.log(`Conversation ${conversationId} updated successfully`);
@@ -1178,7 +1178,7 @@ export class ChatService {
 
       const updatedMessage = await this.messageModel
         .findById(messageId)
-        .populate('senderId', 'username email avatarUrl')
+        .populate('senderId', 'username email avatarUrl isDeleted')
         .exec();
 
       this.eventEmitter.emit(ChatEvents.MESSAGE_EDITED, {

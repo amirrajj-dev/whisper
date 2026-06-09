@@ -27,4 +27,5 @@ export interface PopulatedUser {
   avatarUrl?: string;
   bio?: string;
   lastSeen?: string | null;
+  isDeleted?: boolean;
 }

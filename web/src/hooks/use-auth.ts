@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/src/services/auth.api";
+import { userApi } from "@/src/services/user.api";
 import { useAuthStore } from "@/src/stores/auth.store";
 import { socketManager } from "@/src/socket/socket.manager";
 import type { LoginDto, SignupDto, AuthResponse } from "@/src/types/dto/auth";
@@ -82,6 +83,26 @@ export function useLogout() {
       storeLogout();
       queryClient.clear();
       router.push("/");
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  const { logout: storeLogout } = useAuthStore();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (password: string) => userApi.deleteMe(password),
+    onSuccess: () => {
+      socketManager.fullCleanup();
+      storeLogout();
+      queryClient.clear();
+      router.push("/");
+      toast.success("Account deleted permanently");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message || "Failed to delete account");
     },
   });
 }

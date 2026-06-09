@@ -9,6 +9,7 @@ export function getConversationName(
   const participants = conversation.participants as PopulatedUser[];
   if (participants.length) {
     const other = participants.find((p) => p._id !== currentUserId);
+    if (other?.isDeleted) return "Deleted User";
     return other?.username || "Unknown";
   }
   return "Unknown";
@@ -22,6 +23,7 @@ export function getConversationAvatar(
   const participants = conversation.participants as PopulatedUser[];
   if (!conversation.name && participants.length) {
     const other = participants.find((p) => p._id !== currentUserId);
+    if (other?.isDeleted) return null;
     return other?.avatarUrl || null;
   }
   return null;

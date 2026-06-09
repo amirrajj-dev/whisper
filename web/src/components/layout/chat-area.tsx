@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { useChatStore } from '@/src/stores/chat.store';
 import { socketManager } from '@/src/socket/socket.manager';
 import { useDeleteMessage } from '@/src/hooks/use-chat';
+import { getSenderId, getSenderName } from '@/src/components/chat/message/message-utils';
 import type { Message } from '@/src/types/entities/message';
 
 interface ChatAreaProps {
@@ -160,11 +161,9 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
               <DateSeparator date={group.date} />
               {group.messages.map((msg, idx) => {
                 const prevMsg = idx > 0 ? group.messages[idx - 1] : undefined;
-                const senderId = typeof msg.senderId === 'string' ? msg.senderId : msg.senderId._id;
+                const senderId = getSenderId(msg.senderId);
                 const prevSenderId = prevMsg
-                  ? typeof prevMsg.senderId === 'string'
-                    ? prevMsg.senderId
-                    : prevMsg.senderId._id
+                  ? getSenderId(prevMsg.senderId)
                   : undefined;
                 const showAvatar = !prevMsg || senderId !== prevSenderId;
 
@@ -182,10 +181,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                       setReplyingTo({
                         messageId: m._id,
                         content: m.content,
-                        senderName:
-                          typeof m.senderId === 'string'
-                            ? 'Unknown'
-                            : m.senderId.username,
+                        senderName: getSenderName(m.senderId),
                       })
                     }
                     onEdit={(m) => setEditingMessage({ messageId: m._id, content: m.content })}

@@ -1,6 +1,6 @@
 import { api } from '@/src/libs/axios';
 import type { User } from '@/src/types/entities/user';
-import type { UserListResponse } from '@/src/types/api/responses';
+import type { UserListResponse, MessageResponse } from '@/src/types/api/responses';
 import type { UpdateUserDto } from '@/src/types/dto/user';
 import type { PaginationDto } from '@/src/types/dto/pagination';
 
@@ -30,4 +30,7 @@ export const userApi = {
 
   unblockUser: (userId: string) =>
     api.delete<{ message: string }>(`/users/${userId}/block`).then((r) => r.data),
+
+  deleteMe: (password: string) =>
+    api.delete<MessageResponse>('/users/me', { data: { password } }).then((r) => r.data),
 };

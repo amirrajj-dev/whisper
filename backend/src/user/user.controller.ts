@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
@@ -16,6 +18,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
+import { DeleteAccountDto } from 'src/common/dtos/users/delete-account.dto';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 import { PaginationDto } from 'src/common/dtos/pagination/pagination.dto';
 import { AVATAR_VALIDATION } from 'src/common/constants/upload.constants';
@@ -103,5 +106,23 @@ export class UserController {
     @Param('userId') targetUserId: string,
   ) {
     return this.userService.unblockUser(user._id, targetUserId);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete current user account permanently' })
+  @ApiResponse({
+    status: 200,
+    description: 'Account deleted successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid password',
+  })
+  async deleteAccount(
+    @CurrentUser() user: Omit<User, 'password'>,
+    @Body() data: DeleteAccountDto,
+  ) {
+    return this.userService.deleteAccount(user._id, data.password);
   }
 }

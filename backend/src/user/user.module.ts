@@ -3,13 +3,23 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
 import { UserSchema } from 'src/common/schemas/user.schema';
+import { ConversationSchema } from 'src/common/schemas/conversation.schema';
+import { MessageSchema } from 'src/common/schemas/message.schema';
+import { NotificationSchema } from 'src/common/schemas/notification.schema';
+import { RefreshTokenSchema } from 'src/common/schemas/refresh-token.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UploadModule } from 'src/upload/upload.module';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: 'User', schema: UserSchema },
+      { name: 'Conversation', schema: ConversationSchema },
+      { name: 'Message', schema: MessageSchema },
+      { name: 'Notification', schema: NotificationSchema },
+      { name: 'RefreshToken', schema: RefreshTokenSchema },
+    ]),
     forwardRef(() => AuthModule),
     UploadModule,
   ],
