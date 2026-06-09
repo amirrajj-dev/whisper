@@ -16,6 +16,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { User } from 'src/common/types/user.type';
 import { UpdateUserDto } from 'src/common/dtos/users/update-user.dto';
+import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
 import { PaginationDto } from 'src/common/dtos/pagination/pagination.dto';
 import { AVATAR_VALIDATION } from 'src/common/constants/upload.constants';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -77,7 +78,7 @@ export class UserController {
   })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   async updateUser(
-    @Body() data: UpdateUserDto,
+    @Body(RestrictEmailDomainPipe) data: UpdateUserDto,
     @CurrentUser() user: Omit<User, 'password'>,
     @UploadedFile() avatarFile?: Express.Multer.File,
   ) {

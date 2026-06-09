@@ -4,12 +4,11 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class RestrictEmailDomainPipe implements PipeTransform {
   constructor(private readonly configService: ConfigService) {}
-  transform(value: { email: string }) {
+  transform(value: { email?: string }) {
     const validDomains = this.configService.get<string>(
       'ALLOWED_EMAIL_DOMAINS',
     )!;
-    if (typeof value.email !== 'string')
-      throw new BadRequestException(`invalid email format`);
+    if (typeof value.email !== 'string') return value;
     const domain = value.email.split('@')[1];
     const allowed = validDomains.split(',').map((d) => d.toLowerCase().trim());
     if (!allowed.includes(domain.toLowerCase()))
