@@ -67,7 +67,7 @@ export function Sidebar({
               onClick={() => {
                 if (onShowConversations) onShowConversations();
               }}
-              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full"}`}
+              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full -translate-x-1.5"}`}
             >
               <MessageSquare className="w-5 h-5 shrink-0" />
               {isDesktop && <span className="text-sm truncate">Chats</span>}
@@ -77,7 +77,7 @@ export function Sidebar({
           <div className={`tooltip tooltip-right tooltip-primary z-50`} data-tip="Search">
             <button
               onClick={onSearch}
-              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full"}`}
+              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full -translate-x-1.5"}`}
             >
               <Search className="w-5 h-5 shrink-0" />
               {isDesktop && (
@@ -94,7 +94,7 @@ export function Sidebar({
           <div className={`tooltip tooltip-right tooltip-primary relative z-50`} data-tip="Notifications">
             <button
               onClick={onShowNotifications}
-              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full"} relative`}
+              className={`btn btn-ghost btn-sm ${isDesktop ? "w-full justify-start gap-3" : "btn-square w-full -translate-x-1.5"} relative`}
             >
               <Bell className="w-5 h-5 shrink-0" />
               {isDesktop && <span className="text-sm truncate">Notifications</span>}
@@ -115,7 +115,7 @@ export function Sidebar({
             <div className={`tooltip tooltip-right tooltip-primary z-50`} data-tip="New Chat">
               <button
                 onClick={onNewConversation}
-                className={`btn btn-primary btn-sm ${isDesktop ? "w-full justify-start gap-2" : "btn-square w-full"}`}
+                className={`btn btn-primary btn-sm ${isDesktop ? "w-full justify-start gap-2" : "btn-square w-full translate-x-.5 -translate-y-10"}`}
               >
                 <PenSquare className="w-4 h-4 shrink-0" />
                 {isDesktop && <span className="text-sm truncate">New Chat</span>}
