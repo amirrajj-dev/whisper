@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env
+.env.local
+.env.dev
+.env.prod
+.env.*.local
+next-env.d.ts
+tsconfig.tsbuildinfo
+coverage
