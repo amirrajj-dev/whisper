@@ -167,7 +167,7 @@ export default function ProfilePage() {
                 <textarea
                   {...register('bio')}
                   rows={3}
-                  className={`textarea textarea-bordered w-full resize-none ${errors.bio ? 'textarea-error' : ''}`}
+                  className={`textarea outline-none w-full resize-none ${errors.bio ? 'textarea-error' : ''}`}
                   placeholder="Tell us about yourself..."
                 />
                 {errors.bio && (
@@ -177,7 +177,7 @@ export default function ProfilePage() {
 
               <button
                 type="submit"
-                disabled={updateMutation.isPending || !isDirty}
+                disabled={updateMutation.isPending || (!isDirty && !avatarFile)}
                 className="btn btn-primary w-full gap-2"
               >
                 {updateMutation.isPending ? (
