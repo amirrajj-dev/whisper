@@ -65,16 +65,17 @@ export class AuthController {
     const nodeEnv = this.configService.get<
       'development' | 'production' | 'test'
     >('NODE_ENV');
+    const isProduction = nodeEnv === 'production';
     res.cookie(ACCESS_TOKEN_COOKIE, result.access_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: ACCESS_TOKEN_EXPIRY,
     });
     res.cookie(REFRESH_TOKEN_COOKIE, result.refresh_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: REFRESH_TOKEN_EXPIRY,
     });
     return result;
@@ -99,19 +100,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(loginDto);
-    const nodeEnv = this.configService.get<
-      'development' | 'production' | 'test'
-    >('NODE_ENV');
+    const isProduction =
+      this.configService.get<'development' | 'production' | 'test'>(
+        'NODE_ENV',
+      ) === 'production';
     res.cookie(ACCESS_TOKEN_COOKIE, result.access_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: ACCESS_TOKEN_EXPIRY,
     });
     res.cookie(REFRESH_TOKEN_COOKIE, result.refresh_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: REFRESH_TOKEN_EXPIRY, // 30 days
     });
     return result;
@@ -139,20 +141,21 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token required');
     }
     const result = await this.authService.refreshTokens(refreshToken);
-    const nodeEnv = this.configService.get<
-      'development' | 'production' | 'test'
-    >('NODE_ENV');
+    const isProduction =
+      this.configService.get<'development' | 'production' | 'test'>(
+        'NODE_ENV',
+      ) === 'production';
 
     res.cookie(ACCESS_TOKEN_COOKIE, result.access_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: ACCESS_TOKEN_EXPIRY,
     });
     res.cookie(REFRESH_TOKEN_COOKIE, result.refresh_token, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
       maxAge: REFRESH_TOKEN_EXPIRY,
     });
     return result;
@@ -170,8 +173,18 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(user._id);
-    res.clearCookie(ACCESS_TOKEN_COOKIE);
-    res.clearCookie(REFRESH_TOKEN_COOKIE);
+    const isProduction =
+      this.configService.get<'development' | 'production' | 'test'>(
+        'NODE_ENV',
+      ) === 'production';
+    res.clearCookie(ACCESS_TOKEN_COOKIE, {
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
+    });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, {
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'strict',
+    });
     return { message: 'Logged out successfully' };
   }
 
