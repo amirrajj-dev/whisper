@@ -1,9 +1,9 @@
 import { useCallback } from "react";
-import { View, Text, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, TouchableOpacity, RefreshControl, Alert } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
-import { Bell } from "lucide-react-native";
-import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from "@/hooks/use-notifications";
+import { Bell, Trash2, CheckCheck } from "lucide-react-native";
+import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useDeleteNotification } from "@/hooks/use-notifications";
 import { useNotificationStore } from "@/stores/notification.store";
 import { format } from "date-fns";
 
@@ -12,6 +12,7 @@ export default function NotificationsScreen() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isRefetching } = useNotifications();
   const { mutate: markAsRead } = useMarkAsRead();
   const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   useUnreadCount();
@@ -26,6 +27,13 @@ export default function NotificationsScreen() {
       router.push(`/chat/${item.relatedConversation}`);
     }
   };
+
+  const handleDelete = useCallback((id: string) => {
+    Alert.alert("Delete notification", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => deleteNotification(id) },
+    ]);
+  }, [deleteNotification]);
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
@@ -66,7 +74,7 @@ export default function NotificationsScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            className={`flex-row px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 ${!item.isRead ? "bg-blue-50 dark:bg-blue-950/30" : ""}`}
+            className={`flex-row items-center px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 ${!item.isRead ? "bg-blue-50 dark:bg-blue-950/30" : ""}`}
             onPress={() => handleNotificationPress(item)}
           >
             <View className="flex-1">
@@ -76,6 +84,17 @@ export default function NotificationsScreen() {
               <Text className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
                 {format(new Date(item.createdAt), "MMM d, h:mm a")}
               </Text>
+            </View>
+
+            <View className="flex-row items-center gap-2 ml-3">
+              {!item.isRead && (
+                <TouchableOpacity onPress={() => markAsRead(item._id)} className="p-2">
+                  <CheckCheck size={18} color="#3B82F6" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => handleDelete(item._id)} className="p-2">
+                <Trash2 size={18} color="#EF4444" />
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         )}
