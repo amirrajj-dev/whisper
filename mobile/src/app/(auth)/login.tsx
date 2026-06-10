@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useLogin } from "@/hooks/use-auth";
+import { WhisperLogo } from "@/components/ui/whisper-logo";
 import Toast from "react-native-toast-message";
 
 export default function LoginScreen() {
@@ -35,8 +36,9 @@ export default function LoginScreen() {
       className="flex-1 bg-white dark:bg-neutral-950"
     >
       <View className="flex-1 justify-center px-8">
-        <View className="mb-10">
-          <Text className="text-4xl font-bold text-neutral-900 dark:text-neutral-100">
+        <View className="mb-10 items-center">
+          <WhisperLogo size={80} />
+          <Text className="text-4xl font-bold text-neutral-900 dark:text-neutral-100 mt-4">
             Whisper
           </Text>
           <Text className="text-neutral-500 dark:text-neutral-400 text-base mt-2">
