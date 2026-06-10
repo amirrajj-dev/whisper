@@ -71,16 +71,30 @@ export default function ChatRoomScreen() {
     }
   }, [id]);
 
-  const handleSend = useCallback((content: string) => {
+  const handleSend = useCallback((content: string, file?: { uri: string; type: string; name?: string; mimeType?: string }) => {
     if (!id) return;
     handleTypingStop();
+
+    const messageType = file?.type === "image" ? "image"
+      : file?.type === "video" ? "video"
+      : file?.type === "voice" ? "voice"
+      : file?.type === "file" ? "file"
+      : "text";
+
+    const fileForUpload = file ? {
+      uri: file.uri,
+      name: file.name || `file.${file.type}`,
+      type: file.mimeType || "application/octet-stream",
+    } as unknown as File : undefined;
+
     sendMessage({
       data: {
         conversationId: id,
-        type: "text",
-        content,
+        type: messageType,
+        content: messageType === "text" ? content : file?.name || file?.type || content,
         replyTo: replyingTo?.messageId,
       },
+      file: fileForUpload,
     });
     setReplyingTo(null);
   }, [id, sendMessage, replyingTo, setReplyingTo, handleTypingStop]);
