@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useLogin } from "@/hooks/use-auth";
+import Toast from "react-native-toast-message";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -10,7 +11,22 @@ export default function LoginScreen() {
   const { mutate: login, isPending } = useLogin();
 
   const handleLogin = () => {
-    login({ email, password });
+    if (!email.trim() || !password.trim()) {
+      Toast.show({ type: "error", text1: "Validation", text2: "Email and password are required." });
+      return;
+    }
+    login(
+      { email: email.trim(), password },
+      {
+        onError: (error: { message?: string }) => {
+          Toast.show({
+            type: "error",
+            text1: "Login failed",
+            text2: error.message || "Invalid email or password.",
+          });
+        },
+      },
+    );
   };
 
   return (

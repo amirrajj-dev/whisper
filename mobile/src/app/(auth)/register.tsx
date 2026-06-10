@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useRegister } from "@/hooks/use-auth";
+import Toast from "react-native-toast-message";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -11,7 +12,22 @@ export default function RegisterScreen() {
   const { mutate: register, isPending } = useRegister();
 
   const handleRegister = () => {
-    register({ username, email, password });
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      Toast.show({ type: "error", text1: "Validation", text2: "All fields are required." });
+      return;
+    }
+    register(
+      { username: username.trim(), email: email.trim(), password },
+      {
+        onError: (error: { message?: string }) => {
+          Toast.show({
+            type: "error",
+            text1: "Registration failed",
+            text2: error.message || "Please try again.",
+          });
+        },
+      },
+    );
   };
 
   return (
