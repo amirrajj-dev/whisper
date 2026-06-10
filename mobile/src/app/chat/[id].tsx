@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Text, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, EllipsisVertical } from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { useMessages, useSendMessage, useConversation } from "@/hooks/use-chat";
 import { useAuthStore } from "@/stores/auth.store";
 import { useChatStore } from "@/stores/chat.store";
+import { socketManager } from "@/hooks/socket/socket.manager";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { MessageComposer } from "@/components/chat/message-composer";
+import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { Avatar } from "@/components/ui/avatar";
 import { MessageSkeleton } from "@/components/ui/skeleton";
 import { OnlineDot } from "@/components/presence/online-dot";
@@ -17,8 +19,9 @@ export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
-  const { setActiveConversation, replyingTo, setReplyingTo, activeConversationId } = useChatStore();
+  const { setActiveConversation, replyingTo, setReplyingTo, typingUsers, activeConversationId } = useChatStore();
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: messagesData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useMessages(id ?? null);
   const { data: conversation } = useConversation(id ?? null);
@@ -26,8 +29,15 @@ export default function ChatRoomScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (id) setActiveConversation(id);
-    return () => setActiveConversation(null);
+    if (id) {
+      setActiveConversation(id);
+      socketManager.joinConversation(id);
+      socketManager.setViewingConversation(id);
+    }
+    return () => {
+      socketManager.clearViewingConversation();
+      setActiveConversation(null);
+    };
   }, [id, setActiveConversation]);
 
   const participants = (conversation?.participants ?? []) as PopulatedUser[];
@@ -41,9 +51,29 @@ export default function ChatRoomScreen() {
   const headerAvatar = isGroup ? conversation?.avatarUrl : otherUser?.avatarUrl;
 
   const messages = (messagesData?.pages.flatMap((p) => p.messages) ?? []).reverse();
+  const conversationTypingUsers = id ? typingUsers[id] || [] : [];
+
+  const handleTypingStart = useCallback(() => {
+    if (!id) return;
+    socketManager.startTyping(id);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socketManager.stopTyping(id);
+    }, 2000);
+  }, [id]);
+
+  const handleTypingStop = useCallback(() => {
+    if (!id) return;
+    socketManager.stopTyping(id);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [id]);
 
   const handleSend = useCallback((content: string) => {
     if (!id) return;
+    handleTypingStop();
     sendMessage({
       data: {
         conversationId: id,
@@ -53,7 +83,7 @@ export default function ChatRoomScreen() {
       },
     });
     setReplyingTo(null);
-  }, [id, sendMessage, replyingTo, setReplyingTo]);
+  }, [id, sendMessage, replyingTo, setReplyingTo, handleTypingStop]);
 
   if (isLoading) {
     return (
@@ -130,6 +160,16 @@ export default function ChatRoomScreen() {
         }}
         onEndReachedThreshold={0.3}
         initialNumToRender={20}
+        ListFooterComponent={
+          conversationTypingUsers.length > 0 ? (
+            <View className="px-4">
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                {conversationTypingUsers.map((u) => u.username).join(", ")} typing...
+              </Text>
+              <TypingIndicator />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => {
           const senderId = typeof item.senderId === "string" ? item.senderId : item.senderId?._id;
           const isOwn = senderId === currentUser?._id;
@@ -159,6 +199,7 @@ export default function ChatRoomScreen() {
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
         disabled={isPending}
+        onTextChange={handleTypingStart}
       />
     </KeyboardAvoidingView>
   );

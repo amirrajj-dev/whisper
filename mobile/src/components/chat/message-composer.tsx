@@ -5,14 +5,21 @@ import { MESSAGE_MAX_LENGTH } from "@/constants";
 
 interface MessageComposerProps {
   onSend: (content: string) => void;
+  onTextChange?: () => void;
   replyingTo?: { content: string; senderName: string } | null;
   onCancelReply?: () => void;
   disabled?: boolean;
 }
 
-export function MessageComposer({ onSend, replyingTo, onCancelReply, disabled }: MessageComposerProps) {
+export function MessageComposer({ onSend, onTextChange, replyingTo, onCancelReply, disabled }: MessageComposerProps) {
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
+
+  const handleChangeText = useCallback((t: string) => {
+    if (t.length > MESSAGE_MAX_LENGTH) return;
+    setText(t);
+    onTextChange?.();
+  }, [onTextChange]);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -48,7 +55,7 @@ export function MessageComposer({ onSend, replyingTo, onCancelReply, disabled }:
           placeholder="Message..."
           placeholderTextColor="#9CA3AF"
           value={text}
-          onChangeText={(t) => t.length <= MESSAGE_MAX_LENGTH && setText(t)}
+          onChangeText={handleChangeText}
           multiline
           textAlignVertical="center"
         />
