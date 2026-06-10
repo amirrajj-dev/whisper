@@ -36,6 +36,9 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
 
     const participants = (conversation?.participants ?? []) as PopulatedUser[];
     const isGroup = conversation?.type === "group";
+    const admins = conversation?.admins ?? [];
+    const ownerId = conversation?.owner;
+    const isAdmin = admins.includes(currentUser?._id ?? "") || ownerId === currentUser?._id;
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -115,23 +118,27 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
             </Text>
           )}
 
-          <TouchableOpacity
-            className="flex-row items-center py-3.5 mt-2 border-t border-neutral-100 dark:border-neutral-800 gap-3"
-            onPress={handleManageGroup}
-          >
-            <Settings size={20} color="#3B82F6" />
-            <Text className="text-base text-neutral-900 dark:text-neutral-100 flex-1">Manage Group</Text>
-            <ChevronRight size={18} color="#9CA3AF" />
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              className="flex-row items-center py-3.5 mt-2 border-t border-neutral-100 dark:border-neutral-800 gap-3"
+              onPress={handleManageGroup}
+            >
+              <Settings size={20} color="#3B82F6" />
+              <Text className="text-base text-neutral-900 dark:text-neutral-100 flex-1">Manage Group</Text>
+              <ChevronRight size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            className="flex-row items-center py-3.5 border-t border-neutral-100 dark:border-neutral-800 gap-3"
-            onPress={handleAddParticipants}
-          >
-            <UserPlus size={20} color="#3B82F6" />
-            <Text className="text-base text-neutral-900 dark:text-neutral-100 flex-1">Add Participants</Text>
-            <ChevronRight size={18} color="#9CA3AF" />
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              className="flex-row items-center py-3.5 border-t border-neutral-100 dark:border-neutral-800 gap-3"
+              onPress={handleAddParticipants}
+            >
+              <UserPlus size={20} color="#3B82F6" />
+              <Text className="text-base text-neutral-900 dark:text-neutral-100 flex-1">Add Participants</Text>
+              <ChevronRight size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </BottomSheetView>
       </BottomSheet>
     );
