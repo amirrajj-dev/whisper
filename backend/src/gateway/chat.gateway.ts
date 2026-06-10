@@ -239,6 +239,10 @@ export class ChatGateway
   }
 
   private extractToken(client: Socket): string | null {
+    const authToken = client.handshake.auth?.token;
+    if (authToken) {
+      return authToken as string;
+    }
     const auth = client.handshake.headers.authorization;
     if (auth) {
       return auth.startsWith('Bearer ') ? auth.slice(7) : auth;
