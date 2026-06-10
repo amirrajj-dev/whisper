@@ -188,13 +188,22 @@ export default function ChatRoomScreen() {
             <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
               {headerName}
             </Text>
-            <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-              {isGroup
-                ? `${participants.length} members`
-                : isOtherOnline
-                  ? "Online"
-                  : "Offline"}
-            </Text>
+            {conversationTypingUsers.length > 0 ? (
+              <View className="flex-row items-center">
+                {/* <TypingIndicator /> */}
+                <Text className="text-xs text-blue-500 ml-1">
+                  {conversationTypingUsers.map((u) => u.username).join(", ")} typing...
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+                {isGroup
+                  ? `${participants.length} members`
+                  : isOtherOnline
+                    ? "Online"
+                    : "Offline"}
+              </Text>
+            )}
           </View>
         </TouchableOpacity>
       </View>
@@ -211,16 +220,6 @@ export default function ChatRoomScreen() {
           }
         }}
         onEndReachedThreshold={0.3}
-        ListFooterComponent={
-          conversationTypingUsers.length > 0 ? (
-            <View className="px-4">
-              <Text className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                {conversationTypingUsers.map((u) => u.username).join(", ")} typing...
-              </Text>
-              <TypingIndicator />
-            </View>
-          ) : null
-        }
         renderItem={({ item }) => {
           const senderId = typeof item.senderId === "string" ? item.senderId : item.senderId?._id;
           const isOwn = senderId === currentUser?._id;
