@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useMessages, useSendMessage, useEditMessage, useDeleteMessage, useConversation } from "@/hooks/use-chat";
@@ -26,6 +26,7 @@ export default function ChatRoomScreen() {
   const { setActiveConversation, replyingTo, setReplyingTo, setEditingMessage, typingUsers } = useChatStore();
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<FlashListRef<Message>>(null);
 
   const { data: messagesData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useMessages(id ?? null);
   const { data: conversation } = useConversation(id ?? null);
@@ -51,6 +52,17 @@ export default function ChatRoomScreen() {
     };
   }, [id, setActiveConversation]);
 
+  const messages = messagesData?.pages.flatMap((p) => p.messages) ?? [];
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timer = setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [messages.length]);
+
   const participants = (conversation?.participants ?? []) as PopulatedUser[];
   const isGroup = conversation?.type === "group";
   const otherUser = participants?.find((p) => p._id !== currentUser?._id);
@@ -61,7 +73,6 @@ export default function ChatRoomScreen() {
   const headerName = isGroup ? conversation?.name : otherUser?.username || "Chat";
   const headerAvatar = isGroup ? conversation?.avatarUrl : otherUser?.avatarUrl;
 
-  const messages = messagesData?.pages.flatMap((p) => p.messages) ?? [];
   const conversationTypingUsers = id ? typingUsers[id] || [] : [];
 
   const handleTypingStart = useCallback(() => {
@@ -189,6 +200,7 @@ export default function ChatRoomScreen() {
       </View>
 
       <FlashList
+        ref={listRef}
         data={messages}
         keyExtractor={(item) => item._id}
         drawDistance={300}
