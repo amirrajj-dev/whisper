@@ -5,6 +5,28 @@ import { socketManager } from "./socket.manager";
 import { getOtherParticipantIds } from "./socket-utils";
 import type { RegisterEvent, SocketHandlerDeps } from "./socket-handler-deps";
 
+export async function syncConversationRooms(
+  conversationsData: InfiniteData<{ conversations: Conversation[] }> | undefined,
+  user: { _id: string } | null,
+  setOnline: (userId: string) => void,
+  fetchAndSetOnline: (userIds: string[]) => Promise<void>,
+) {
+  if (!user) return;
+  setOnline(user._id);
+
+  if (!conversationsData?.pages) return;
+
+  const allConversations = conversationsData.pages.flatMap((p) => p.conversations);
+  for (const conv of allConversations) {
+    socketManager.joinConversation(conv._id);
+  }
+
+  const otherIds = getOtherParticipantIds(conversationsData, user._id);
+  if (otherIds.length > 0) {
+    await fetchAndSetOnline(otherIds);
+  }
+}
+
 export function registerConnectionHandlers(
   registerEvent: RegisterEvent,
   { queryClient, user, setOnline, fetchAndSetOnline }: SocketHandlerDeps,
@@ -20,19 +42,14 @@ export function registerConnectionHandlers(
       | undefined;
     const conversationsData = resultItem?.data;
 
-    if (user) {
-      setOnline(user._id);
-      const otherIds = getOtherParticipantIds(conversationsData, user._id);
-      if (otherIds.length > 0) {
-        await fetchAndSetOnline(otherIds);
-      }
-      const activeId = useChatStore.getState().activeConversationId;
-      if (activeId) {
-        socketManager.setViewingConversation(activeId);
-        await queryClient.refetchQueries({
-          queryKey: ["conversation", activeId],
-        });
-      }
+    syncConversationRooms(conversationsData, user, setOnline, fetchAndSetOnline);
+
+    const activeId = useChatStore.getState().activeConversationId;
+    if (activeId) {
+      socketManager.setViewingConversation(activeId);
+      await queryClient.refetchQueries({
+        queryKey: ["conversation", activeId],
+      });
     }
   });
 }

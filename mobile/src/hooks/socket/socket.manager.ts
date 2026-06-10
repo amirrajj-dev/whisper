@@ -122,20 +122,21 @@ class SocketManager {
   }
 
   joinConversation(conversationId: string): void {
-    if (!this.socket?.connected) return;
     if (this.joinedRooms.has(conversationId)) return;
+    this.joinedRooms.add(conversationId);
+    if (!this.socket?.connected) return;
     (this.socket as unknown as Socket).emit("join:conversation", {
       conversationId,
     });
-    this.joinedRooms.add(conversationId);
   }
 
   leaveConversation(conversationId: string): void {
     if (!this.joinedRooms.has(conversationId)) return;
+    this.joinedRooms.delete(conversationId);
+    if (!this.socket?.connected) return;
     (this.socket as unknown as Socket).emit("leave:conversation", {
       conversationId,
     });
-    this.joinedRooms.delete(conversationId);
   }
 
   startTyping(conversationId: string): void {

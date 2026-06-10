@@ -68,13 +68,14 @@ api.interceptors.response.use(
           { headers: { 'Content-Type': 'application/json' } },
         );
 
-        const data = res.data as { access_token: string; refresh_token: string };
-        await secureStorage.setAccessToken(data.access_token);
-        await secureStorage.setRefreshToken(data.refresh_token);
+        const body = res.data as { data: { access_token: string; refresh_token: string } };
+        const { access_token, refresh_token } = body.data;
+        await secureStorage.setAccessToken(access_token);
+        await secureStorage.setRefreshToken(refresh_token);
 
         processQueue(null);
 
-        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
