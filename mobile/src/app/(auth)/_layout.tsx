@@ -1,8 +1,9 @@
-import { Redirect } from "expo-router";
+import { Stack } from "expo-router";
 import { useAuthStore } from "@/stores/auth.store";
+import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
-export default function Index() {
+export default function AuthLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
@@ -17,5 +18,10 @@ export default function Index() {
     return <Redirect href="/(tabs)/chats" />;
   }
 
-  return <Redirect href="/(auth)/login" />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
+    </Stack>
+  );
 }
