@@ -51,7 +51,7 @@ export function useCreateConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateConversationDto) => chatApi.createConversation(data),
+    mutationFn: ({ data, file }: { data: CreateConversationDto; file?: File }) => chatApi.createConversation(data, file),
     onSuccess: (raw) => {
       const result = raw as Conversation & { isExisting?: boolean };
       const conversation = result as Conversation;

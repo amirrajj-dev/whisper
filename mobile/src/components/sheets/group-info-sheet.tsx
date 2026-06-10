@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
-import { View, Text, TouchableOpacity, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, useColorScheme } from "react-native";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, type BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import { Settings, UserPlus, ChevronRight } from "lucide-react-native";
@@ -21,7 +21,7 @@ export interface GroupInfoSheetRef {
 export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>(
   ({ conversation }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ["auto"], []);
+    const snapPoints = useMemo(() => ["80%"], []);
     const router = useRouter();
     const currentUser = useAuthStore((s) => s.user);
     const onlineUsers = usePresenceStore((s) => s.onlineUsers);
@@ -30,6 +30,9 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
       open: () => bottomSheetRef.current?.snapToIndex(0),
       close: () => bottomSheetRef.current?.close(),
     }));
+
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
 
     const participants = (conversation?.participants ?? []) as PopulatedUser[];
     const isGroup = conversation?.type === "group";
@@ -57,13 +60,15 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
     const remaining = participants.length - 5;
 
     return (
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-      >
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={-1}
+          snapPoints={snapPoints}
+          enablePanDownToClose
+          enableDynamicSizing
+          backdropComponent={renderBackdrop}
+          backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
+        >
         <BottomSheetView className="px-6 pb-8">
           <View className="items-center mb-6">
             <Avatar uri={conversation.avatarUrl} name={conversation.name || "Group"} size={72} />

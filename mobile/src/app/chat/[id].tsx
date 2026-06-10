@@ -61,7 +61,7 @@ export default function ChatRoomScreen() {
   const headerName = isGroup ? conversation?.name : otherUser?.username || "Chat";
   const headerAvatar = isGroup ? conversation?.avatarUrl : otherUser?.avatarUrl;
 
-  const messages = (messagesData?.pages.flatMap((p) => p.messages) ?? []).reverse();
+  const messages = messagesData?.pages.flatMap((p) => p.messages) ?? [];
   const conversationTypingUsers = id ? typingUsers[id] || [] : [];
 
   const handleTypingStart = useCallback(() => {

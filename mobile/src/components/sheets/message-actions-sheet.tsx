@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, useColorScheme } from "react-native";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, type BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
 import { MessageCircle, Edit3, Trash2, Copy } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
@@ -27,7 +27,7 @@ export interface MessageActionsSheetRef {
 export const MessageActionsSheet = forwardRef<MessageActionsSheetRef, MessageActionsSheetProps>(
   ({ message, isOwn, onReply, onEdit, onDelete, senderName }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ["auto"], []);
+    const snapPoints = useMemo(() => ["50%"], []);
 
     useImperativeHandle(ref, () => ({
       open: () => bottomSheetRef.current?.snapToIndex(0),
@@ -59,6 +59,9 @@ export const MessageActionsSheet = forwardRef<MessageActionsSheetRef, MessageAct
       bottomSheetRef.current?.close();
     }, [message, onDelete]);
 
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
         <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="close" />
@@ -74,7 +77,9 @@ export const MessageActionsSheet = forwardRef<MessageActionsSheetRef, MessageAct
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose
+        enableDynamicSizing
         backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
       >
         <BottomSheetView className="px-6 pb-8">
           <Text className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Message Actions</Text>

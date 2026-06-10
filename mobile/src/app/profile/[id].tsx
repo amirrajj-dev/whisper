@@ -49,7 +49,7 @@ export default function UserProfileScreen() {
   const handleMessage = () => {
     if (!id) return;
     createConversation(
-      { type: "private", participants: [id] },
+      { data: { type: "private", participants: [id] } },
       { onSuccess: () => router.back() },
     );
   };

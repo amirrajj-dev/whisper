@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, useColorScheme } from "react-native";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, type BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import { MessageCircle, Ban, ShieldOff, ChevronRight } from "lucide-react-native";
@@ -23,7 +23,7 @@ export interface UserProfileSheetRef {
 export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheetProps>(
   ({ user, conversationId }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ["auto"], []);
+    const snapPoints = useMemo(() => ["50%"], []);
     const router = useRouter();
     const onlineUsers = usePresenceStore((s) => s.onlineUsers);
     const { data: blockedUsers } = useBlockedUsers();
@@ -34,6 +34,8 @@ export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheet
       close: () => bottomSheetRef.current?.close(),
     }));
 
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
     const isOnline = user ? onlineUsers.has(user._id) : false;
     const isBlocked = user ? blockedUsers?.some((b) => b._id === user._id) ?? false : false;
 
@@ -64,7 +66,9 @@ export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheet
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose
+        enableDynamicSizing
         backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
       >
         <BottomSheetView className="px-6 pb-8">
           <View className="items-center mb-6">
