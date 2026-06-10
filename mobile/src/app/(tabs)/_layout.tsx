@@ -6,6 +6,7 @@ import { Redirect } from "expo-router";
 import { ActivityIndicator, View, Text, type ColorValue } from "react-native";
 import { MessageCircle, Bell, Settings } from "lucide-react-native";
 import { useNotificationStore } from "@/stores/notification.store";
+import { NetworkBanner } from "@/components/ui/network-banner";
 
 function SocketInitializer() {
   useSocket();
@@ -52,6 +53,7 @@ export default function TabsLayout() {
     <>
       <SocketInitializer />
       <UnreadCountInitializer />
+      <NetworkBanner />
       <Tabs
         screenOptions={{
           headerShown: false,
