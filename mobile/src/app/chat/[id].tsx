@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import { useMessages, useSendMessage, useConversation } from "@/hooks/use-chat";
+import { useMessages, useSendMessage, useEditMessage, useDeleteMessage, useConversation } from "@/hooks/use-chat";
 import { useAuthStore } from "@/stores/auth.store";
 import { useChatStore } from "@/stores/chat.store";
 import { socketManager } from "@/hooks/socket/socket.manager";
@@ -13,20 +14,30 @@ import { Avatar } from "@/components/ui/avatar";
 import { MessageSkeleton } from "@/components/ui/skeleton";
 import { OnlineDot } from "@/components/presence/online-dot";
 import { usePresenceStore } from "@/stores/presence.store";
-import type { PopulatedUser } from "@/types";
+import { MessageActionsSheet } from "@/components/sheets/message-actions-sheet";
+import { UserProfileSheet } from "@/components/sheets/user-profile-sheet";
+import { GroupInfoSheet } from "@/components/sheets/group-info-sheet";
+import type { PopulatedUser, Message } from "@/types";
 
 export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
-  const { setActiveConversation, replyingTo, setReplyingTo, typingUsers, activeConversationId } = useChatStore();
+  const { setActiveConversation, replyingTo, setReplyingTo, setEditingMessage, typingUsers } = useChatStore();
   const onlineUsers = usePresenceStore((s) => s.onlineUsers);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: messagesData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useMessages(id ?? null);
   const { data: conversation } = useConversation(id ?? null);
   const { mutate: sendMessage, isPending } = useSendMessage();
-  const flatListRef = useRef<FlatList>(null);
+  const { mutate: editMessage } = useEditMessage();
+  const { mutate: deleteMessage } = useDeleteMessage();
+
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+
+  const messageActionsRef = useRef<{ open: () => void; close: () => void }>(null);
+  const userProfileRef = useRef<{ open: () => void; close: () => void }>(null);
+  const groupInfoRef = useRef<{ open: () => void; close: () => void }>(null);
 
   useEffect(() => {
     if (id) {
@@ -99,6 +110,31 @@ export default function ChatRoomScreen() {
     setReplyingTo(null);
   }, [id, sendMessage, replyingTo, setReplyingTo, handleTypingStop]);
 
+  const handleLongPress = useCallback((message: Message) => {
+    setSelectedMessage(message);
+    messageActionsRef.current?.open();
+  }, []);
+
+  const handleReply = useCallback((messageId: string, content: string, senderName: string) => {
+    setReplyingTo({ messageId, content, senderName });
+  }, [setReplyingTo]);
+
+  const handleEdit = useCallback((messageId: string, content: string) => {
+    setEditingMessage({ messageId, content });
+  }, [setEditingMessage]);
+
+  const handleDelete = useCallback((messageId: string) => {
+    deleteMessage(messageId);
+  }, [deleteMessage]);
+
+  const handleHeaderPress = useCallback(() => {
+    if (isGroup) {
+      groupInfoRef.current?.open();
+    } else if (otherUser) {
+      userProfileRef.current?.open();
+    }
+  }, [isGroup, otherUser]);
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950">
@@ -132,16 +168,7 @@ export default function ChatRoomScreen() {
           <ArrowLeft size={24} color="#3B82F6" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          className="flex-row items-center flex-1"
-          onPress={() => {
-            if (isGroup) {
-              router.push(`/group/${id}/manage`);
-            } else if (otherUser) {
-              router.push(`/profile/${otherUser._id}`);
-            }
-          }}
-        >
+        <TouchableOpacity className="flex-row items-center flex-1" onPress={handleHeaderPress}>
           <View className="relative">
             <Avatar uri={headerAvatar} name={headerName || "?"} size={40} />
             {!isGroup && <OnlineDot isOnline={isOtherOnline} />}
@@ -161,11 +188,10 @@ export default function ChatRoomScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        className="flex-1"
+      <FlashList
         data={messages}
         keyExtractor={(item) => item._id}
+        drawDistance={300}
         contentContainerStyle={{ paddingVertical: 8 }}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) {
@@ -173,7 +199,6 @@ export default function ChatRoomScreen() {
           }
         }}
         onEndReachedThreshold={0.3}
-        initialNumToRender={20}
         ListFooterComponent={
           conversationTypingUsers.length > 0 ? (
             <View className="px-4">
@@ -191,11 +216,7 @@ export default function ChatRoomScreen() {
             <MessageBubble
               message={item}
               isOwn={isOwn}
-              onLongPress={() => {
-                if (isOwn && !item.deleted) {
-                  // Message actions would go here
-                }
-              }}
+              onLongPress={() => handleLongPress(item)}
             />
           );
         }}
@@ -215,6 +236,19 @@ export default function ChatRoomScreen() {
         disabled={isPending}
         onTextChange={handleTypingStart}
       />
+
+      <MessageActionsSheet
+        ref={messageActionsRef}
+        message={selectedMessage}
+        isOwn={selectedMessage ? (typeof selectedMessage.senderId === "string" ? selectedMessage.senderId : selectedMessage.senderId?._id) === currentUser?._id : false}
+        onReply={handleReply}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        senderName={selectedMessage ? (typeof selectedMessage.senderId === "object" ? (selectedMessage.senderId as PopulatedUser)?.username : "Unknown") : "Unknown"}
+      />
+
+      {!isGroup && <UserProfileSheet ref={userProfileRef} user={otherUser || null} conversationId={id} />}
+      {isGroup && <GroupInfoSheet ref={groupInfoRef} conversation={conversation || null} />}
     </KeyboardAvoidingView>
   );
 }
