@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { AppProviders } from "@/providers/app-providers";
 import { StatusBar } from "expo-status-bar";
+import Toast from "react-native-toast-message";
 import "../global.css"
 
 export default function RootLayout() {
@@ -15,6 +16,7 @@ export default function RootLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="group" />
       </Stack>
+      <Toast />
     </AppProviders>
   );
 }
