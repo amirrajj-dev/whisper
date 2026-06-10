@@ -1,7 +1,8 @@
-import { Stack } from "expo-router";
+import { Tabs } from "expo-router";
 import { useAuthStore } from "@/stores/auth.store";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
+import { MessageCircle, Bell, Settings } from "lucide-react-native";
 
 export default function TabsLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -19,10 +20,47 @@ export default function TabsLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="chats" />
-      <Stack.Screen name="notifications" />
-      <Stack.Screen name="settings" />
-    </Stack>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#3B82F6",
+        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#E5E7EB",
+          borderTopWidth: 0.5,
+          paddingBottom: 4,
+          height: 54,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="chats"
+        options={{
+          title: "Chats",
+          tabBarIcon: ({ color, size }) => (
+            <MessageCircle size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ color, size }) => (
+            <Bell size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Settings size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
