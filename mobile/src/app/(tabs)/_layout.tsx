@@ -1,13 +1,36 @@
 import { Tabs } from "expo-router";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocket } from "@/hooks/use-socket";
+import { useUnreadCount } from "@/hooks/use-notifications";
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Text, type ColorValue } from "react-native";
 import { MessageCircle, Bell, Settings } from "lucide-react-native";
+import { useNotificationStore } from "@/stores/notification.store";
 
 function SocketInitializer() {
   useSocket();
   return null;
+}
+
+function UnreadCountInitializer() {
+  useUnreadCount();
+  return null;
+}
+
+function BellWithBadge(props: { focused: boolean; color: ColorValue; size: number }) {
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  return (
+    <View className="relative">
+      <Bell size={props.size} color={props.color as string} />
+      {unreadCount > 0 && (
+        <View className="absolute -top-1 -right-1.5 bg-red-500 rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+          <Text className="text-white text-[9px] font-bold">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function TabsLayout() {
@@ -28,6 +51,7 @@ export default function TabsLayout() {
   return (
     <>
       <SocketInitializer />
+      <UnreadCountInitializer />
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -56,7 +80,7 @@ export default function TabsLayout() {
           options={{
             title: "Notifications",
             tabBarIcon: ({ color, size }) => (
-              <Bell size={size} color={color} />
+              <BellWithBadge focused={false} color={color} size={size} />
             ),
           }}
         />
