@@ -7,13 +7,14 @@ import { Avatar } from "@/components/ui/avatar";
 import type { PopulatedUser } from "@/types";
 import { format } from "date-fns";
 import { usePresenceStore } from "@/stores/presence.store";
-import { useBlockedUsers, useUnblockUser } from "@/hooks/use-blocked-users";
+import { useBlockedUsers, useBlockUser, useUnblockUser } from "@/hooks/use-blocked-users";
 import { OnlineDot } from "@/components/presence/online-dot";
 
 interface UserProfileSheetProps {
   user: PopulatedUser | null;
   conversationId?: string;
   onClose?: () => void;
+  onSendMessage?: () => void;
 }
 
 export interface UserProfileSheetRef {
@@ -22,12 +23,13 @@ export interface UserProfileSheetRef {
 }
 
 export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheetProps>(
-  ({ user, conversationId, onClose }, ref) => {
+  ({ user, conversationId, onClose, onSendMessage }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["50%"], []);
     const router = useRouter();
     const onlineUsers = usePresenceStore((s) => s.onlineUsers);
     const { data: blockedUsers } = useBlockedUsers();
+    const { mutate: blockUser, isPending: isBlocking } = useBlockUser();
     const { mutate: unblockUser, isPending: isUnblocking } = useUnblockUser();
 
     useImperativeHandle(ref, () => ({
@@ -49,10 +51,8 @@ export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheet
 
     const handleSendMessage = useCallback(() => {
       bottomSheetRef.current?.close();
-      if (conversationId) {
-        router.push(`/chat/${conversationId}`);
-      }
-    }, [conversationId, router]);
+      onSendMessage?.();
+    }, [onSendMessage]);
 
     const handleViewProfile = useCallback(() => {
       bottomSheetRef.current?.close();
@@ -116,12 +116,10 @@ export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheet
           ) : (
             <TouchableOpacity
               className="flex-row items-center py-3.5 border-t border-neutral-100 dark:border-neutral-800 gap-3"
-              onPress={() => {
-                bottomSheetRef.current?.close();
-                router.push(`/profile/${user._id}`);
-              }}
+              onPress={() => blockUser(user._id)}
+              disabled={isBlocking}
             >
-              <Ban size={20} color="#EF4444" />
+              {isBlocking ? <ActivityIndicator size="small" color="#EF4444" /> : <Ban size={20} color="#EF4444" />}
               <Text className="text-base text-red-500">Block User</Text>
             </TouchableOpacity>
           )}

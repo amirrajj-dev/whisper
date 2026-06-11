@@ -12,6 +12,22 @@ export function useBlockedUsers() {
   });
 }
 
+export function useBlockUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => userApi.blockUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      Toast.show({ type: 'success', text1: 'User blocked' });
+    },
+    onError: (_err) => {
+      Toast.show({ type: 'error', text1: 'Failed to block user' });
+    },
+  });
+}
+
 export function useUnblockUser() {
   const queryClient = useQueryClient();
 
