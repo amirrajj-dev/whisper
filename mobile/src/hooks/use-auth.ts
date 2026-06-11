@@ -74,13 +74,13 @@ export function useLogout() {
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
-      router.replace("/(auth)/login");
+      router.replace("/(auth)");
     },
     onError: async () => {
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
-      router.replace("/(auth)/login");
+      router.replace("/(auth)");
     },
   });
 }
@@ -96,7 +96,7 @@ export function useDeleteAccount() {
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
-      router.replace("/(auth)/login");
+      router.replace("/(auth)");
     },
     onError: (error: { message?: string }) => {
       // Toast handled at component level
