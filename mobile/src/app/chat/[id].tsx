@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Platform, Keyboard } from "react-native";
+import { View, Text, TouchableOpacity, Platform, Keyboard, AppState } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -64,6 +64,24 @@ export default function ChatRoomScreen() {
       setActiveConversation(null);
     };
   }, [id, setActiveConversation, currentUser, removeTypingUser]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const handleAppState = (nextAppState: string) => {
+      if (nextAppState.match(/inactive|background/)) {
+        socketManager.clearViewingConversation();
+      } else if (nextAppState === 'active') {
+        socketManager.setViewingConversation(id);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppState);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [id]);
 
   const messages = messagesData?.pages.flatMap((p) => p.messages) ?? [];
 

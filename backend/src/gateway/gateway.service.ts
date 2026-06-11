@@ -11,7 +11,7 @@ export class GatewayService implements OnModuleInit {
   private server: Server;
   private readonly userSockets = new Map<string, Set<string>>();
   private readonly socketUsers = new Map<string, string>();
-  private readonly activeConversations = new Map<string, string>();
+  private readonly socketActiveConversations = new Map<string, string>();
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
@@ -84,6 +84,7 @@ export class GatewayService implements OnModuleInit {
   }
 
   unregisterSocket(socketId: string): string | null {
+    this.socketActiveConversations.delete(socketId);
     const userId = this.socketUsers.get(socketId) ?? null;
     if (!userId) return null;
 
@@ -136,16 +137,22 @@ export class GatewayService implements OnModuleInit {
     return false;
   }
 
-  setActiveConversation(userId: string, conversationId: string | null): void {
+  setActiveConversation(socketId: string, conversationId: string | null): void {
     if (conversationId === null) {
-      this.activeConversations.delete(userId);
+      this.socketActiveConversations.delete(socketId);
     } else {
-      this.activeConversations.set(userId, conversationId);
+      this.socketActiveConversations.set(socketId, conversationId);
     }
   }
 
-  getActiveConversation(userId: string): string | undefined {
-    return this.activeConversations.get(userId);
+  shouldSuppressPush(userId: string, conversationId: string): boolean {
+    const socketIds = this.userSockets.get(userId);
+    if (!socketIds || socketIds.size === 0) return false;
+    for (const socketId of socketIds) {
+      const activeConv = this.socketActiveConversations.get(socketId);
+      if (activeConv !== conversationId) return false;
+    }
+    return true;
   }
 
   getConnectionStats(): { onlineUsers: number; activeSockets: number } {
