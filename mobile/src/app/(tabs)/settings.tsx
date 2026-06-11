@@ -13,22 +13,23 @@ import { useBlockedUsers, useUnblockUser } from "@/hooks/use-blocked-users";
 import { useRouter } from "expo-router";
 import { Ban, CheckCircle, ChevronRight, Moon, Sun } from "lucide-react-native";
 import { Avatar } from "@/components/ui/avatar";
-import { useState } from "react";
 import { Image } from "expo-image";
+import { themeStorage } from "@/libs/secure-storage";
 
 export default function SettingsScreen() {
   const { user } = useCurrentUser();
   const { mutate: logout, isPending } = useLogout();
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(colorScheme === "dark");
+  const isDark = colorScheme === "dark";
 
   const { data: blockedUsers, isLoading: isLoadingBlocked } = useBlockedUsers();
   const { mutate: unblockUser, isPending: isUnblocking } = useUnblockUser();
 
   const toggleTheme = (value: boolean) => {
-    setIsDark(value);
-    Appearance.setColorScheme(value ? "dark" : "light");
+    const scheme = value ? "dark" : "light";
+    Appearance.setColorScheme(scheme);
+    themeStorage.set(scheme);
   };
 
   return (

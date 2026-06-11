@@ -45,3 +45,31 @@ export const secureStorage = {
     }
   },
 };
+
+const THEME_KEY = "whisper_theme";
+
+let cachedTheme: "light" | "dark" | null = null;
+
+export const themeStorage = {
+  async get(): Promise<"light" | "dark" | null> {
+    if (cachedTheme) return cachedTheme;
+    try {
+      const value = await SecureStore.getItemAsync(THEME_KEY);
+      cachedTheme = value as "light" | "dark" | null;
+      return cachedTheme;
+    } catch {
+      return null;
+    }
+  },
+
+  async set(theme: "light" | "dark"): Promise<void> {
+    cachedTheme = theme;
+    try {
+      await SecureStore.setItemAsync(THEME_KEY, theme);
+    } catch {}
+  },
+
+  getSync(): "light" | "dark" | null {
+    return cachedTheme;
+  },
+};
