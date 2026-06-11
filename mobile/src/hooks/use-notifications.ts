@@ -2,8 +2,17 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { notificationApi } from '@/services/notification.api';
 import { useNotificationStore } from '@/stores/notification.store';
 import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
 
 const NOTIFICATIONS_PER_PAGE = 20;
+
+async function syncBadgeCount(count: number): Promise<void> {
+  try {
+    await Notifications.setBadgeCountAsync(count);
+  } catch {
+    // Best-effort
+  }
+}
 
 export function useNotifications() {
   return useInfiniteQuery({
@@ -30,6 +39,7 @@ export function useUnreadCount() {
   useEffect(() => {
     if (query.data) {
       setUnreadCount(query.data.count);
+      syncBadgeCount(query.data.count);
     }
   }, [query.data, setUnreadCount]);
 
@@ -38,14 +48,16 @@ export function useUnreadCount() {
 
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
-  const { decrementUnread } = useNotificationStore();
+  const { decrementUnread, unreadCount } = useNotificationStore();
 
   return useMutation({
     mutationFn: (id: string) => notificationApi.markAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      const next = Math.max(0, unreadCount - 1);
       decrementUnread();
+      syncBadgeCount(next);
     },
   });
 }
@@ -60,6 +72,7 @@ export function useMarkAllAsRead() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       resetUnread();
+      syncBadgeCount(0);
     },
   });
 }
@@ -74,6 +87,7 @@ export function useDeleteAllNotifications() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       resetUnread();
+      syncBadgeCount(0);
     },
   });
 }
