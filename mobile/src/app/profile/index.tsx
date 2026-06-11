@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi } from "@/services/user.api";
 import { useCurrentUser } from "@/hooks/use-auth";
+import { useAuthStore } from "@/stores/auth.store";
 import { Avatar } from "@/components/ui/avatar";
 import { BIO_MAX_LENGTH, USERNAME_MAX_LENGTH } from "@/constants";
 import Toast from "react-native-toast-message";
@@ -16,6 +17,7 @@ export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
+  const setUser = useAuthStore((s) => s.setUser);
 
   const [username, setUsername] = useState(user?.username || "");
   const [bio, setBio] = useState(user?.bio || "");
@@ -33,8 +35,8 @@ export default function EditProfileScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["me"] });
+      if (user) setUser({ ...user, username, bio });
       Toast.show({ type: "success", text1: "Profile updated" });
-      router.back();
     },
     onError: (error: { message?: string }) => {
       Toast.show({ type: "error", text1: error.message || "Failed to update profile" });
@@ -68,7 +70,13 @@ export default function EditProfileScreen() {
           <ArrowLeft size={24} color="#3B82F6" />
         </TouchableOpacity>
         <Text className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex-1">Edit Profile</Text>
-        <TouchableOpacity onPress={() => updateProfile()} disabled={isPending} className="flex-row items-center">
+        <TouchableOpacity onPress={() => {
+          if (username === user?.username && bio === (user?.bio || "") && !avatarFile) {
+            Toast.show({ type: "info", text1: "No changes to save" });
+            return;
+          }
+          updateProfile();
+        }} disabled={isPending} className="flex-row items-center">
           {isPending ? (
             <ActivityIndicator size="small" color="#3B82F6" />
           ) : (
