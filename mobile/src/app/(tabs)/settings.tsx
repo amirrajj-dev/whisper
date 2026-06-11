@@ -6,10 +6,10 @@ import {
   FlatList,
   Switch,
   Appearance,
+  useColorScheme,
 } from "react-native";
 import { useLogout, useCurrentUser } from "@/hooks/use-auth";
 import { useBlockedUsers, useUnblockUser } from "@/hooks/use-blocked-users";
-import { useColorScheme } from "nativewind";
 import { useRouter } from "expo-router";
 import { Ban, CheckCircle, ChevronRight, Moon, Sun } from "lucide-react-native";
 import { Avatar } from "@/components/ui/avatar";
@@ -20,7 +20,7 @@ export default function SettingsScreen() {
   const { user } = useCurrentUser();
   const { mutate: logout, isPending } = useLogout();
   const router = useRouter();
-  const { colorScheme, setColorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
   const [isDark, setIsDark] = useState(colorScheme === "dark");
 
   const { data: blockedUsers, isLoading: isLoadingBlocked } = useBlockedUsers();
@@ -28,7 +28,7 @@ export default function SettingsScreen() {
 
   const toggleTheme = (value: boolean) => {
     setIsDark(value);
-    setColorScheme(value ? "dark" : "light");
+    Appearance.setColorScheme(value ? "dark" : "light");
   };
 
   return (

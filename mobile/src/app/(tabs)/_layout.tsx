@@ -3,11 +3,11 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useSocket } from "@/hooks/use-socket";
 import { useUnreadCount } from "@/hooks/use-notifications";
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View, Text, type ColorValue } from "react-native";
+import { ActivityIndicator, View, Text, useColorScheme, type ColorValue } from "react-native";
 import { MessageCircle, Bell, Settings } from "lucide-react-native";
 import { useNotificationStore } from "@/stores/notification.store";
 import { NetworkBanner } from "@/components/ui/network-banner";
-import { useColorScheme } from "nativewind";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function SocketInitializer() {
   useSocket();
@@ -37,8 +37,9 @@ function BellWithBadge(props: { focused: boolean; color: ColorValue; size: numbe
 
 export default function TabsLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const insets = useSafeAreaInsets();
 
   if (isLoading) {
     return (
@@ -66,8 +67,8 @@ export default function TabsLayout() {
             backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF",
             borderTopColor: isDark ? "#262626" : "#E5E7EB",
             borderTopWidth: 0.5,
-            paddingBottom: 4,
-            height: 54,
+            paddingBottom: insets.bottom + 4,
+            height: 54 + insets.bottom,
           },
         }}
       >
