@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, MessageCircle, Ban, CheckCircle } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi } from "@/services/user.api";
@@ -11,6 +12,7 @@ import Toast from "react-native-toast-message";
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { mutate: createConversation } = useCreateConversation();
@@ -64,7 +66,7 @@ export default function UserProfileScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
-      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700">
+      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700" style={{ paddingTop: insets.top + 12 }}>
         <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
           <ArrowLeft size={24} color="#3B82F6" />
         </TouchableOpacity>

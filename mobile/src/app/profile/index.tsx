@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Camera, Save } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import Toast from "react-native-toast-message";
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
 
@@ -61,7 +63,7 @@ export default function EditProfileScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       className="flex-1 bg-white dark:bg-neutral-950"
     >
-      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700">
+      <View className="flex-row items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700" style={{ paddingTop: insets.top + 12 }}>
         <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
           <ArrowLeft size={24} color="#3B82F6" />
         </TouchableOpacity>
