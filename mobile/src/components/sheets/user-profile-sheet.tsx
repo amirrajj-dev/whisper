@@ -13,6 +13,8 @@ import { OnlineDot } from "@/components/presence/online-dot";
 interface UserProfileSheetProps {
   user: PopulatedUser | null;
   conversationId?: string;
+  index: number;
+  onChange: (index: number) => void;
 }
 
 export interface UserProfileSheetRef {
@@ -21,7 +23,7 @@ export interface UserProfileSheetRef {
 }
 
 export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheetProps>(
-  ({ user, conversationId }, ref) => {
+  ({ user, conversationId, index, onChange }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["50%"], []);
     const router = useRouter();
@@ -63,12 +65,12 @@ export const UserProfileSheet = forwardRef<UserProfileSheetRef, UserProfileSheet
     return (
       <BottomSheet
         ref={bottomSheetRef}
-        index={-1}
+        index={index}
         snapPoints={snapPoints}
         enablePanDownToClose
-        enableDynamicSizing
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
+        onChange={onChange}
       >
         <BottomSheetView className="px-6 pb-8">
           <View className="items-center mb-6">

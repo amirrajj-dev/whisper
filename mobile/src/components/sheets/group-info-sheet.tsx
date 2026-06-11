@@ -2,15 +2,18 @@ import { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "r
 import { View, Text, TouchableOpacity, FlatList, useColorScheme } from "react-native";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView, type BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
-import { Settings, UserPlus, ChevronRight } from "lucide-react-native";
+import { Settings, UserPlus, LogOut, ChevronRight } from "lucide-react-native";
 import { Avatar } from "@/components/ui/avatar";
 import { OnlineDot } from "@/components/presence/online-dot";
 import type { Conversation, PopulatedUser } from "@/types";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePresenceStore } from "@/stores/presence.store";
+import { useRemoveParticipant } from "@/hooks/use-chat";
 
 interface GroupInfoSheetProps {
   conversation: Conversation | null;
+  index: number;
+  onChange: (index: number) => void;
 }
 
 export interface GroupInfoSheetRef {
@@ -19,7 +22,7 @@ export interface GroupInfoSheetRef {
 }
 
 export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>(
-  ({ conversation }, ref) => {
+  ({ conversation, index, onChange }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["80%"], []);
     const router = useRouter();
@@ -47,6 +50,8 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
       [],
     );
 
+    const { mutate: removeParticipant, isPending: isLeaving } = useRemoveParticipant();
+
     const handleManageGroup = useCallback(() => {
       bottomSheetRef.current?.close();
       if (conversation) router.push(`/group/${conversation._id}/manage`);
@@ -57,6 +62,12 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
       if (conversation) router.push(`/group/${conversation._id}/add-participants`);
     }, [conversation, router]);
 
+    const handleLeaveGroup = useCallback(() => {
+      if (!conversation || !currentUser) return;
+      bottomSheetRef.current?.close();
+      removeParticipant({ conversationId: conversation._id, userId: currentUser._id });
+    }, [conversation, currentUser, removeParticipant]);
+
     if (!isGroup || !conversation) return null;
 
     const displayParticipants = participants.slice(0, 5);
@@ -65,12 +76,12 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
     return (
         <BottomSheet
           ref={bottomSheetRef}
-          index={-1}
+          index={index}
           snapPoints={snapPoints}
           enablePanDownToClose
-          enableDynamicSizing
           backdropComponent={renderBackdrop}
           backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
+          onChange={onChange}
         >
         <BottomSheetView className="px-6 pb-8">
           <View className="items-center mb-6">
@@ -139,6 +150,15 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
               <ChevronRight size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            className="flex-row items-center py-3.5 border-t border-neutral-100 dark:border-neutral-800 gap-3 mt-2"
+            onPress={handleLeaveGroup}
+            disabled={isLeaving}
+          >
+            <LogOut size={20} color="#EF4444" />
+            <Text className="text-base text-red-500 flex-1">Leave Group</Text>
+          </TouchableOpacity>
         </BottomSheetView>
       </BottomSheet>
     );
