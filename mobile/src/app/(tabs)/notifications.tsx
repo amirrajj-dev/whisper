@@ -1,10 +1,11 @@
-import { useCallback } from "react";
-import { View, Text, TouchableOpacity, RefreshControl, Alert } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, TouchableOpacity, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
-import { Bell, Trash2, CheckCheck } from "lucide-react-native";
-import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useDeleteNotification } from "@/hooks/use-notifications";
+import { Bell, Trash2, CheckCheck, Check } from "lucide-react-native";
+import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useDeleteAllNotifications } from "@/hooks/use-notifications";
 import { useNotificationStore } from "@/stores/notification.store";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { format } from "date-fns";
 
 export default function NotificationsScreen() {
@@ -13,7 +14,10 @@ export default function NotificationsScreen() {
   const { mutate: markAsRead } = useMarkAsRead();
   const { mutate: markAllAsRead } = useMarkAllAsRead();
   const { mutate: deleteNotification } = useDeleteNotification();
+  const { mutate: deleteAllNotifications } = useDeleteAllNotifications();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
   useUnreadCount();
 
@@ -29,11 +33,8 @@ export default function NotificationsScreen() {
   };
 
   const handleDelete = useCallback((id: string) => {
-    Alert.alert("Delete notification", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteNotification(id) },
-    ]);
-  }, [deleteNotification]);
+    setDeleteTarget(id);
+  }, []);
 
   return (
     <View className="flex-1 bg-white dark:bg-neutral-950">
@@ -47,9 +48,14 @@ export default function NotificationsScreen() {
           )}
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity onPress={() => markAllAsRead()}>
-            <Text className="text-blue-500 text-sm font-medium">Mark all read</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={() => markAllAsRead()}>
+              <CheckCheck size={22} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowDeleteAllModal(true)}>
+              <Trash2 size={22} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -89,7 +95,7 @@ export default function NotificationsScreen() {
             <View className="flex-row items-center gap-2 ml-3">
               {!item.isRead && (
                 <TouchableOpacity onPress={() => markAsRead(item._id)} className="p-2">
-                  <CheckCheck size={18} color="#3B82F6" />
+                  <Check size={18} color="#3B82F6" />
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => handleDelete(item._id)} className="p-2">
@@ -98,6 +104,44 @@ export default function NotificationsScreen() {
             </View>
           </TouchableOpacity>
         )}
+      />
+
+      <ConfirmModal
+        visible={deleteTarget !== null}
+        title="Delete Notification"
+        message="This notification will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        icon={
+          <View className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-950/40 items-center justify-center">
+            <Trash2 size={26} color="#EF4444" />
+          </View>
+        }
+        onConfirm={() => {
+          if (deleteTarget) deleteNotification(deleteTarget);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        visible={showDeleteAllModal}
+        title="Delete All Notifications"
+        message="All your notifications will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete All"
+        cancelLabel="Cancel"
+        destructive
+        icon={
+          <View className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-950/40 items-center justify-center">
+            <Trash2 size={26} color="#EF4444" />
+          </View>
+        }
+        onConfirm={() => {
+          deleteAllNotifications();
+          setShowDeleteAllModal(false);
+        }}
+        onCancel={() => setShowDeleteAllModal(false)}
       />
     </View>
   );
