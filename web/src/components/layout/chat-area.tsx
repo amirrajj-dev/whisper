@@ -106,6 +106,24 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   }, [conversationId]);
 
   useEffect(() => {
+    if (!conversationId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        socketManager.clearViewingConversation();
+      } else {
+        socketManager.setViewingConversation(conversationId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
     if (!conversationId || !messagesData?.pages?.length) return;
     const timer = setTimeout(() => {
       socketManager.markAsRead(conversationId);

@@ -10,6 +10,7 @@ import { NotificationModule } from './notification/notification.module';
 import { AuthModule } from './auth/auth.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { UploadModule } from './upload/upload.module';
+import { PushModule } from './push/push.module';
 import { LoggerModule } from 'nestjs-pino';
 import mongoose from 'mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -168,6 +169,7 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
       }),
     }),
     MailModule,
+    PushModule,
     HealthModule,
   ],
   controllers: [AppController],

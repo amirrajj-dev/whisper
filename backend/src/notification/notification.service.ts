@@ -33,6 +33,10 @@ export class NotificationService {
       });
       await notification.save();
 
+      await this.cacheManager
+        .del(`unread_count:${data.userId}`)
+        .catch(() => {});
+
       // Emit via event emitter
       this.eventEmitter.emit(NotificationEvents.NOTIFICATION_CREATED, {
         userId: data.userId,

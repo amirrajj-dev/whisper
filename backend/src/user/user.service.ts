@@ -19,6 +19,7 @@ import { MessageDocument } from 'src/common/schemas/message.schema';
 import { NotificationDocument } from 'src/common/schemas/notification.schema';
 import { RefreshTokenDocument } from 'src/common/schemas/refresh-token.schema';
 import { BlockRecordDocument } from 'src/common/schemas/block-record.schema';
+import { DeviceTokenDocument } from 'src/common/schemas/device-token.schema';
 import { UploadService } from 'src/upload/upload.service';
 
 @Injectable()
@@ -36,6 +37,8 @@ export class UserService {
     private refreshTokenModel: Model<RefreshTokenDocument>,
     @InjectModel('BlockRecord')
     private blockRecordModel: Model<BlockRecordDocument>,
+    @InjectModel('DeviceToken')
+    private deviceTokenModel: Model<DeviceTokenDocument>,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -633,6 +636,7 @@ export class UserService {
 
     await this.notificationModel.deleteMany({ userId }).exec();
     await this.refreshTokenModel.deleteMany({ userId }).exec();
+    await this.deviceTokenModel.deleteMany({ userId }).exec();
 
     // Remove user from admins in any remaining conversations
     await this.conversationModel

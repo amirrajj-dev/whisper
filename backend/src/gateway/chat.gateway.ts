@@ -120,7 +120,6 @@ export class ChatGateway
     await this.userModel.findByIdAndUpdate(userId, { lastSeen: new Date() });
 
     if (!this.gatewayService.isUserOnline(userId)) {
-      this.gatewayService.setActiveConversation(userId, null);
       const offlinePayload = { userId, lastSeen: new Date().toISOString() };
       for (const convId of conversationIds) {
         this.server
@@ -164,14 +163,17 @@ export class ChatGateway
     if (!payload?.conversationId) return;
     const userId = client.data?.user?.id;
     if (!userId) return;
-    this.gatewayService.setActiveConversation(userId, payload.conversationId);
+    this.gatewayService.setActiveConversation(
+      client.id,
+      payload.conversationId,
+    );
   }
 
   @SubscribeMessage('conversation:stopped_viewing')
   handleConversationStoppedViewing(client: Socket): void {
     const userId = client.data?.user?.id;
     if (!userId) return;
-    this.gatewayService.setActiveConversation(userId, null);
+    this.gatewayService.setActiveConversation(client.id, null);
   }
 
   @SubscribeMessage('typing:start')
