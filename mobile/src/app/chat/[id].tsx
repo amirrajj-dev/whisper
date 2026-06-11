@@ -21,6 +21,7 @@ import { GroupInfoSheet } from "@/components/sheets/group-info-sheet";
 import type { PopulatedUser, Message } from "@/types";
 import type { UserProfileSheetRef } from "@/components/sheets/user-profile-sheet";
 import type { GroupInfoSheetRef } from "@/components/sheets/group-info-sheet";
+import type { MessageComposerRef } from "@/components/chat/message-composer";
 
 export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,6 +47,7 @@ export default function ChatRoomScreen() {
   const messageActionsRef = useRef<{ open: () => void; close: () => void }>(null);
   const userProfileRef = useRef<UserProfileSheetRef>(null);
   const groupInfoRef = useRef<GroupInfoSheetRef>(null);
+  const composerRef = useRef<MessageComposerRef>(null);
 
   useEffect(() => {
     if (id) {
@@ -174,6 +176,13 @@ export default function ChatRoomScreen() {
     }
   }, [isGroup, otherUser]);
 
+  const handleSendMessageFromSheet = useCallback(() => {
+    setShowUserSheet(false);
+    setTimeout(() => {
+      composerRef.current?.focus();
+    }, 400);
+  }, []);
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-white dark:bg-neutral-950">
@@ -280,6 +289,7 @@ export default function ChatRoomScreen() {
       {/* Message Composer */}
       <View style={{ paddingBottom: insets.bottom }}>
         <MessageComposer
+          ref={composerRef}
           onSend={handleSend}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
@@ -305,6 +315,7 @@ export default function ChatRoomScreen() {
           user={otherUser || null}
           conversationId={id}
           onClose={() => setShowUserSheet(false)}
+          onSendMessage={handleSendMessageFromSheet}
         />
       )}
       {isGroup && showGroupSheet && (

@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useImperativeHandle } from "react";
+import React from "react";
 import {
   View,
   TextInput,
@@ -22,6 +23,10 @@ interface Attachment {
   fileSize?: number;
 }
 
+export interface MessageComposerRef {
+  focus: () => void;
+}
+
 interface MessageComposerProps {
   onSend: (content: string, file?: Attachment) => void;
   onTextChange?: () => void;
@@ -30,12 +35,20 @@ interface MessageComposerProps {
   disabled?: boolean;
 }
 
-export function MessageComposer({ onSend, onTextChange, replyingTo, onCancelReply, disabled }: MessageComposerProps) {
+export const MessageComposer = React.forwardRef(
+  function MessageComposer(props: MessageComposerProps, ref: React.Ref<MessageComposerRef>) {
+    const { onSend, onTextChange, replyingTo, onCancelReply, disabled } = props;
+    const inputRef = useRef<TextInput>(null);
+
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        inputRef.current?.focus();
+      },
+    }));
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const inputRef = useRef<TextInput>(null);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -280,4 +293,4 @@ export function MessageComposer({ onSend, onTextChange, replyingTo, onCancelRepl
       )}
     </View>
   );
-}
+});
