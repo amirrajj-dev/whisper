@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '@/services/chat.api';
 import { useChatStore } from '@/stores/chat.store';
+import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import type { CreateConversationDto, SendMessageDto, EditMessageDto, UpdateConversationDto } from '@/types/dto/chat';
 import type { Message } from '@/types/entities/message';
@@ -64,7 +65,7 @@ export function useCreateConversation() {
           return { ...old, pages };
         },
       );
-      Toast.show({ type: 'success', text1: result.isExisting ? 'Conversation already exists' : 'Conversation created' });
+      if (!result.isExisting) Toast.show({ type: 'success', text1: 'Conversation created' });
     },
     onError: (error: { message?: string }) => {
       Toast.show({ type: 'error', text1: error.message || 'Failed to create conversation' });
@@ -220,14 +221,17 @@ export function useAddParticipants() {
 
 export function useRemoveParticipant() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: ({ conversationId, userId }: { conversationId: string; userId: string }) =>
       chatApi.removeParticipant(conversationId, userId),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.cancelQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.removeQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      Toast.show({ type: 'success', text1: 'Participant removed' });
+      router.replace("/(tabs)/chats");
+      Toast.show({ type: 'success', text1: 'Left group' });
     },
     onError: (error: { message?: string }) => {
       Toast.show({ type: 'error', text1: error.message || 'Failed to remove participant' });
