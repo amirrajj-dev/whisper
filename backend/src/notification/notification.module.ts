@@ -5,6 +5,7 @@ import { NotificationService } from './notification.service';
 import { NotificationListener } from './notification.listener';
 import { NotificationSchema } from 'src/common/schemas/notification.schema';
 import { GatewayModule } from 'src/gateway/gateway.module';
+import { PushModule } from 'src/push/push.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { GatewayModule } from 'src/gateway/gateway.module';
       { name: 'Notification', schema: NotificationSchema },
     ]),
     GatewayModule,
+    PushModule,
   ],
   controllers: [NotificationController],
   providers: [NotificationService, NotificationListener],

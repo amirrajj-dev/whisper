@@ -11,6 +11,7 @@ import { BlockRecordSchema } from 'src/common/schemas/block-record.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UploadModule } from 'src/upload/upload.module';
 import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.pipe';
+import { DeviceTokenSchema } from 'src/common/schemas/device-token.schema';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RestrictEmailDomainPipe } from 'src/common/pipes/restrict-email-domain.
       { name: 'Notification', schema: NotificationSchema },
       { name: 'RefreshToken', schema: RefreshTokenSchema },
       { name: 'BlockRecord', schema: BlockRecordSchema },
+      { name: 'DeviceToken', schema: DeviceTokenSchema },
     ]),
     forwardRef(() => AuthModule),
     UploadModule,
