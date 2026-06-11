@@ -48,7 +48,7 @@ export function MessageComposer({ onSend, onTextChange, replyingTo, onCancelRepl
   const handleChangeText = useCallback((t: string) => {
     if (t.length > MESSAGE_MAX_LENGTH) return;
     setText(t);
-    onTextChange?.();
+    if (t.length > 0) onTextChange?.();
   }, [onTextChange]);
 
   const handleSend = useCallback(() => {
