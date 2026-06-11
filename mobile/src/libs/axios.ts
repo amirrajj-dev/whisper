@@ -4,6 +4,7 @@ import { appEvents } from './event-emitter';
 import { API_URL } from '@/constants';
 
 let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
 let failedQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -39,6 +40,41 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+export async function refreshTokens(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await secureStorage.getRefreshToken();
+      const res = await axios.post(
+        `${api.defaults.baseURL}/auth/refresh`,
+        refreshToken ? { refresh_token: refreshToken } : {},
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      const body = res.data as { data: { access_token: string; refresh_token: string } };
+      await secureStorage.setAccessToken(body.data.access_token);
+      await secureStorage.setRefreshToken(body.data.refresh_token);
+      processQueue(null);
+      return true;
+    } catch (err) {
+      processQueue(new Error('Refresh failed'));
+      console.log('[refreshTokens] failed:', err instanceof Error ? err.message : err, (err as any)?.response?.status);
+      const stillHasToken = await secureStorage.getRefreshToken();
+      if (stillHasToken) {
+        await secureStorage.clearTokens();
+        appEvents.emit('auth:logout');
+      }
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (response) => response.data,
   async (error: AxiosError) => {
@@ -54,37 +90,25 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => api(originalRequest));
+        }).then(async () => {
+          const token = await secureStorage.getAccessToken();
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
       }
 
       originalRequest._retry = true;
-      isRefreshing = true;
 
-      try {
-        const refreshToken = await secureStorage.getRefreshToken();
-        const res = await axios.post(
-          `${api.defaults.baseURL}/auth/refresh`,
-          refreshToken ? { refresh_token: refreshToken } : {},
-          { headers: { 'Content-Type': 'application/json' } },
-        );
-
-        const body = res.data as { data: { access_token: string; refresh_token: string } };
-        const { access_token, refresh_token } = body.data;
-        await secureStorage.setAccessToken(access_token);
-        await secureStorage.setRefreshToken(refresh_token);
-
-        processQueue(null);
-
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+      const success = await refreshTokens();
+      if (success) {
+        const token = await secureStorage.getAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError);
-        await secureStorage.clearTokens();
-        appEvents.emit('auth:logout');
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
+
+      return Promise.reject(
+        (error.response?.data as { message?: string })?.message || error.message || 'Unauthorized',
+      );
     }
 
     const normalizedError = {
