@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Platform, KeyboardAvoidingView } from "react-native";
+import { View, Text, TouchableOpacity, Platform, Keyboard } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -39,8 +39,9 @@ export default function ChatRoomScreen() {
   const { mutate: deleteMessage } = useDeleteMessage();
 
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [userSheetIndex, setUserSheetIndex] = useState(-1);
-  const [groupSheetIndex, setGroupSheetIndex] = useState(-1);
+  const [showUserSheet, setShowUserSheet] = useState(false);
+  const [showGroupSheet, setShowGroupSheet] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const messageActionsRef = useRef<{ open: () => void; close: () => void }>(null);
   const userProfileRef = useRef<UserProfileSheetRef>(null);
@@ -72,6 +73,20 @@ export default function ChatRoomScreen() {
       return () => clearTimeout(timer);
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    const show = Keyboard.addListener("keyboardWillShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardWillHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const participants = (conversation?.participants ?? []) as PopulatedUser[];
   const isGroup = conversation?.type === "group";
@@ -153,9 +168,9 @@ export default function ChatRoomScreen() {
 
   const handleHeaderPress = useCallback(() => {
     if (isGroup) {
-      setGroupSheetIndex(0);
+      setShowGroupSheet(true);
     } else if (otherUser) {
-      setUserSheetIndex(0);
+      setShowUserSheet(true);
     }
   }, [isGroup, otherUser]);
 
@@ -182,7 +197,9 @@ export default function ChatRoomScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-neutral-950">
+    <View className="flex-1 bg-white dark:bg-neutral-950" style={{
+      paddingBottom: Platform.OS === "ios" ? keyboardHeight : 0,
+    }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950" style={{ paddingTop: insets.top }}>
         <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
@@ -260,21 +277,16 @@ export default function ChatRoomScreen() {
         }
       />
 
-      {/* Message Composer with KeyboardAvoidingView */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        <View style={{ paddingBottom: insets.bottom }}>
-          <MessageComposer
-            onSend={handleSend}
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-            disabled={isPending}
-            onTextChange={handleTypingStart}
-          />
-        </View>
-      </KeyboardAvoidingView>
+      {/* Message Composer */}
+      <View style={{ paddingBottom: insets.bottom }}>
+        <MessageComposer
+          onSend={handleSend}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          disabled={isPending}
+          onTextChange={handleTypingStart}
+        />
+      </View>
 
       {/* Modals and Sheets */}
       <MessageActionsSheet
@@ -287,19 +299,21 @@ export default function ChatRoomScreen() {
         senderName={selectedMessage ? (typeof selectedMessage.senderId === "object" ? (selectedMessage.senderId as PopulatedUser)?.username : "Unknown") : "Unknown"}
       />
 
-      <UserProfileSheet
-        ref={userProfileRef}
-        user={otherUser || null}
-        conversationId={id}
-        index={userSheetIndex}
-        onChange={(i) => setUserSheetIndex(i)}
-      />
-      <GroupInfoSheet
-        ref={groupInfoRef}
-        conversation={conversation || null}
-        index={groupSheetIndex}
-        onChange={(i) => setGroupSheetIndex(i)}
-      />
+      {!isGroup && showUserSheet && (
+        <UserProfileSheet
+          ref={userProfileRef}
+          user={otherUser || null}
+          conversationId={id}
+          onClose={() => setShowUserSheet(false)}
+        />
+      )}
+      {isGroup && showGroupSheet && (
+        <GroupInfoSheet
+          ref={groupInfoRef}
+          conversation={conversation || null}
+          onClose={() => setShowGroupSheet(false)}
+        />
+      )}
     </View>
   );
 }

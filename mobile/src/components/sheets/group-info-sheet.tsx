@@ -12,8 +12,7 @@ import { useRemoveParticipant } from "@/hooks/use-chat";
 
 interface GroupInfoSheetProps {
   conversation: Conversation | null;
-  index: number;
-  onChange: (index: number) => void;
+  onClose?: () => void;
 }
 
 export interface GroupInfoSheetRef {
@@ -22,7 +21,7 @@ export interface GroupInfoSheetRef {
 }
 
 export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>(
-  ({ conversation, index, onChange }, ref) => {
+  ({ conversation, onClose }, ref) => {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["80%"], []);
     const router = useRouter();
@@ -76,12 +75,12 @@ export const GroupInfoSheet = forwardRef<GroupInfoSheetRef, GroupInfoSheetProps>
     return (
         <BottomSheet
           ref={bottomSheetRef}
-          index={index}
+          index={0}
           snapPoints={snapPoints}
           enablePanDownToClose
           backdropComponent={renderBackdrop}
           backgroundStyle={{ backgroundColor: isDark ? "#0A0A0A" : "#FFFFFF" }}
-          onChange={onChange}
+          onChange={(i) => { if (i === -1) onClose?.(); }}
         >
         <BottomSheetView className="px-6 pb-8">
           <View className="items-center mb-6">
