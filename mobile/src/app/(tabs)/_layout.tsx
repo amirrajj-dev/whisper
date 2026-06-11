@@ -8,6 +8,7 @@ import { MessageCircle, Bell, Settings } from "lucide-react-native";
 import { useNotificationStore } from "@/stores/notification.store";
 import { NetworkBanner } from "@/components/ui/network-banner";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNotificationObserver, usePushTokenRegistration } from "@/hooks/use-push-notifications";
 
 function SocketInitializer() {
   useSocket();
@@ -16,6 +17,12 @@ function SocketInitializer() {
 
 function UnreadCountInitializer() {
   useUnreadCount();
+  return null;
+}
+
+function PushNotificationInitializer() {
+  usePushTokenRegistration();
+  useNotificationObserver();
   return null;
 }
 
@@ -57,6 +64,7 @@ export default function TabsLayout() {
     <>
       <SocketInitializer />
       <UnreadCountInitializer />
+      <PushNotificationInitializer />
       <NetworkBanner />
       <Tabs
         screenOptions={{

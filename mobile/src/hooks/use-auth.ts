@@ -6,6 +6,7 @@ import { secureStorage } from "@/libs/secure-storage";
 import type { LoginDto, SignupDto, AuthResponse } from "@/types/dto/auth";
 import type { User } from "@/types/entities/user";
 import { useRouter } from "expo-router";
+import { unregisterPushToken } from "./use-push-notifications";
 
 function mapAuthUser(user: AuthResponse["user"]): Omit<User, "password"> {
   return {
@@ -71,12 +72,14 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: async () => {
+      await unregisterPushToken();
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
       router.replace("/(auth)");
     },
     onError: async () => {
+      await unregisterPushToken();
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
@@ -93,6 +96,7 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: (password: string) => userApi.deleteMe(password),
     onSuccess: async () => {
+      await unregisterPushToken();
       await secureStorage.clearTokens();
       storeLogout();
       queryClient.clear();
