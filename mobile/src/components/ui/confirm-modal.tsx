@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Modal, Animated, Pressable } from "react-native";
+import { View, Text, TouchableOpacity, Modal, Animated, Pressable, ActivityIndicator } from "react-native";
 
 interface ConfirmModalProps {
   visible: boolean;
@@ -9,6 +9,8 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   icon?: React.ReactNode;
   destructive?: boolean;
+  isLoading?: boolean;
+  children?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -21,6 +23,8 @@ export function ConfirmModal({
   cancelLabel = "Cancel",
   icon,
   destructive = true,
+  isLoading,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -78,7 +82,9 @@ export function ConfirmModal({
               {message}
             </Text>
 
-            <View className="flex-row gap-3">
+            {children}
+
+            <View className="flex-row gap-3 mt-5">
               <TouchableOpacity
                 className="flex-1 py-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 items-center"
                 onPress={onCancel}
@@ -95,10 +101,15 @@ export function ConfirmModal({
                 }`}
                 onPress={onConfirm}
                 activeOpacity={0.7}
+                disabled={isLoading}
               >
-                <Text className="text-sm font-semibold text-white">
-                  {confirmLabel}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-sm font-semibold text-white">
+                    {confirmLabel}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </Pressable>
