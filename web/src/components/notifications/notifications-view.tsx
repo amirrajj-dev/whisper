@@ -45,7 +45,6 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
               ) : (
                 <CheckCheck className="w-3.5 h-3.5" />
               )}
-              <span className="hidden sm:inline">Mark all read</span>
             </button>
             <button
               onClick={() => setShowDeleteAllConfirm(true)}

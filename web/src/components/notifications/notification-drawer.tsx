@@ -51,7 +51,6 @@ export function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps)
                 ) : (
                   <CheckCheck className="w-3 h-3" />
                 )}
-                Mark all read
               </button>
             </div>
 
