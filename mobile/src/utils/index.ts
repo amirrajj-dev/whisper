@@ -48,5 +48,5 @@ export function isVideoMimeType(mime: string): boolean {
 }
 
 export function isAudioMimeType(mime: string): boolean {
-  return ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg'].includes(mime);
+  return ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/m4a', 'audio/mp4', 'audio/aac', 'audio/x-m4a'].includes(mime);
 }

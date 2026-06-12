@@ -27,7 +27,7 @@ export class CloudinaryService {
   private readonly allowedMimeTypes: Record<UploadType, string[]> = {
     image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
     video: ['video/mp4', 'video/webm', 'video/quicktime'],
-    voice: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm'],
+    voice: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/m4a', 'audio/mp4', 'audio/aac', 'audio/x-m4a'],
     file: [
       'application/pdf',
       'application/zip',
