@@ -22,6 +22,8 @@ import type { PopulatedUser, Message } from "@/types";
 import type { UserProfileSheetRef } from "@/components/sheets/user-profile-sheet";
 import type { GroupInfoSheetRef } from "@/components/sheets/group-info-sheet";
 import type { MessageComposerRef } from "@/components/chat/message-composer";
+import { AttachmentSheet } from "@/components/chat/attachment-sheet";
+import type { AttachmentSheetRef } from "@/components/chat/attachment-sheet";
 
 export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,6 +50,15 @@ export default function ChatRoomScreen() {
   const userProfileRef = useRef<UserProfileSheetRef>(null);
   const groupInfoRef = useRef<GroupInfoSheetRef>(null);
   const composerRef = useRef<MessageComposerRef>(null);
+  const attachmentSheetRef = useRef<AttachmentSheetRef>(null);
+
+  const handleAttachPress = useCallback(() => {
+    attachmentSheetRef.current?.open();
+  }, []);
+
+  const handleAttachSelect = useCallback((option: string) => {
+    composerRef.current?.attachSelect(option);
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -313,10 +324,15 @@ export default function ChatRoomScreen() {
           onCancelReply={() => setReplyingTo(null)}
           disabled={isPending}
           onTextChange={handleTypingStart}
+          onAttachPress={handleAttachPress}
         />
       </View>
 
       {/* Modals and Sheets */}
+      <AttachmentSheet
+        ref={attachmentSheetRef}
+        onSelect={handleAttachSelect}
+      />
       <MessageActionsSheet
         ref={messageActionsRef}
         message={selectedMessage}

@@ -380,46 +380,50 @@ export function MessageComposer({ conversationId, onMessageSent }: MessageCompos
             exit={{ height: 0, opacity: 0 }}
             className="px-4 py-2 bg-base-200 border-t border-base-300"
           >
-            <div className="relative inline-flex items-center gap-2 bg-base-300/50 rounded-lg p-2 pr-3">
+            <div className="flex items-start gap-3 bg-base-300/40 rounded-xl p-3 pr-3 w-full">
               {file.type.startsWith('image/') && filePreview && (
-                <img src={filePreview} alt="" className="h-14 rounded object-cover" />
+                <div className="relative shrink-0">
+                  <img src={filePreview} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                  <span className="absolute -bottom-1.5 -right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded-md font-medium">
+                    {formatFileSize(file.size)}
+                  </span>
+                </div>
               )}
               {file.type.startsWith('video/') && (
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-base-300 flex items-center justify-center shrink-0">
-                    <Film className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium truncate max-w-[120px]">{file.name}</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="relative w-14 h-14 rounded-xl bg-black flex items-center justify-center shrink-0 overflow-hidden">
+                    {filePreview && <img src={filePreview} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                    <Film className="w-6 h-6 text-white relative z-10" />
                   </div>
                 </div>
               )}
               {file.type.startsWith('audio/') && (
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mic className="w-6 h-6 text-primary" />
                   </div>
                   {filePreview && (
-                    <audio src={filePreview} controls className="h-9 sm:h-12 w-52 sm:w-70 md:w-80" preload="none" />
+                    <audio src={filePreview} controls className="h-9 w-48 sm:w-56" preload="none" style={{ filter: 'invert(0.1)' }} />
                   )}
                 </div>
               )}
               {!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/') && (
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <FileText className="w-6 h-6 text-primary" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium truncate max-w-[150px]">{file.name}</p>
-                    <p className="text-[10px] text-base-content/40">{formatFileSize(file.size)}</p>
+                    <p className="text-sm font-medium truncate max-w-[180px]">{file.name}</p>
+                    <p className="text-xs text-base-content/50 mt-0.5">{formatFileSize(file.size)}</p>
                   </div>
                 </div>
               )}
+              <div className="flex-1" />
               <button
                 onClick={removeFile}
-                className="btn btn-ghost btn-xs btn-square shrink-0 ml-1"
+                className="btn btn-ghost btn-xs btn-square shrink-0 mt-0.5 hover:bg-base-300 transition-colors"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </motion.div>
