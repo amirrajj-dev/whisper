@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
 import { Bell, Trash2, CheckCheck, Check } from "lucide-react-native";
+import Toast from "react-native-toast-message";
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useDeleteAllNotifications } from "@/hooks/use-notifications";
 import { useNotificationStore } from "@/stores/notification.store";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -47,14 +48,27 @@ export default function NotificationsScreen() {
             </View>
           )}
         </View>
-        {unreadCount > 0 && (
+        {notifications.length > 0 && (
           <View className="flex-row items-center gap-3">
-            <TouchableOpacity onPress={() => markAllAsRead()}>
+            <TouchableOpacity
+              onPress={() => {
+                if (unreadCount === 0) {
+                  Toast.show({ type: "info", text1: "No unread notifications" });
+                  return;
+                }
+                markAllAsRead(undefined, {
+                  onSuccess: () =>
+                    Toast.show({ type: "success", text1: "All notifications marked as read" }),
+                });
+              }}
+            >
               <CheckCheck size={22} color="#3B82F6" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowDeleteAllModal(true)}>
-              <Trash2 size={22} color="#EF4444" />
-            </TouchableOpacity>
+            {notifications.length > 1 && (
+              <TouchableOpacity onPress={() => setShowDeleteAllModal(true)}>
+                <Trash2 size={22} color="#EF4444" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
