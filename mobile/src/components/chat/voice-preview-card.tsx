@@ -73,8 +73,7 @@ export function VoicePreviewCard({ uri, duration: initialDuration, fileSize, onD
         <View className="flex-1 gap-2">
           <View className="flex-row items-end h-8 gap-[2px]">
             {BAR_HEIGHTS.map((h, i) => {
-              const isActive = progress > 0 && (i / BAR_COUNT) * 100 <= progress;
-              const isCurrentlyActive = isPlaying && isActive;
+              const isActive = (i / BAR_COUNT) * 100 <= progress;
               return (
                 <TouchableOpacity
                   key={i}
@@ -82,12 +81,8 @@ export function VoicePreviewCard({ uri, duration: initialDuration, fileSize, onD
                   onPress={() => handleSeek(i)}
                   style={{
                     height: `${h}%`,
-                    backgroundColor: isCurrentlyActive
-                      ? "#3B82F6"
-                      : isActive
-                        ? (isDark ? "#6366F1" : "#3B82F6")
-                        : (isDark ? "#525252" : "#D4D4D4"),
-                    opacity: isCurrentlyActive ? 1 : isActive ? 0.8 : 0.4,
+                    backgroundColor: isActive ? "#3B82F6" : (isDark ? "#525252" : "#D4D4D4"),
+                    opacity: isPlaying && isActive ? 1 : isActive ? 0.85 : 0.4,
                   }}
                 />
               );

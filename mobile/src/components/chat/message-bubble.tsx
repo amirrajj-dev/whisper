@@ -48,7 +48,7 @@ export function MessageBubble({ message, isOwn, onLongPress }: MessageBubbleProp
               </Text>
             </View>
           )}
-          <MediaContent message={message} />
+          <MediaContent message={message} isOwn={isOwn} />
           {(message.type !== "image" && message.type !== "video") && (
             <View className="flex-row items-center justify-end mt-0.5 gap-1">
               <Text

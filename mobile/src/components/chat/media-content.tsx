@@ -1,16 +1,17 @@
-import { useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from "react-native";
-import { Play, Pause } from "lucide-react-native";
+import { useState } from "react";
+import { View, Text, TouchableOpacity, Image } from "react-native";
+import { Play } from "lucide-react-native";
 import type { Message } from "@/types/entities/message";
 import { ImageLightbox } from "@/components/media/image-lightbox";
 import { FileCard } from "@/components/media/file-card";
-import { AVATAR_MAX_SIZE } from "@/constants";
+import { VoiceMessage } from "@/components/chat/voice-message";
 
 interface MediaContentProps {
   message: Message;
+  isOwn?: boolean;
 }
 
-export function MediaContent({ message }: MediaContentProps) {
+export function MediaContent({ message, isOwn = false }: MediaContentProps) {
   const [lightboxVisible, setLightboxVisible] = useState(false);
 
   if (message.deleted) {
@@ -68,14 +69,8 @@ export function MediaContent({ message }: MediaContentProps) {
 
     case "voice":
       return (
-        <View className="flex-row items-center gap-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl px-4 py-3 min-w-[160px]">
-          <TouchableOpacity className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center">
-            <Play size={16} color="white" fill="white" />
-          </TouchableOpacity>
-          <View className="flex-1 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full">
-            <View className="w-1/3 h-full bg-blue-500 rounded-full" />
-          </View>
-          <Text className="text-xs text-neutral-500 dark:text-neutral-400">0:12</Text>
+        <View className="-mx-1">
+          <VoiceMessage uri={message.content} isOwn={isOwn} />
         </View>
       );
 
