@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { notificationApi } from '@/services/notification.api';
 import { useNotificationStore } from '@/stores/notification.store';
 import { useEffect } from 'react';
-import * as Notifications from 'expo-notifications';
+import { Notifications } from '@/libs/notifications';
 
 const NOTIFICATIONS_PER_PAGE = 20;
 

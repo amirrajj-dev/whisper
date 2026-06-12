@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
+import { Notifications } from '@/libs/notifications';
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -8,15 +8,6 @@ import { pushApi } from '@/services/push.api';
 import { useAuthStore } from '@/stores/auth.store';
 
 const PUSH_TOKEN_KEY = 'whisper_push_token';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
 
 async function getDeviceName(): Promise<string | undefined> {
   try {
@@ -119,9 +110,22 @@ function redirectToConversation(data: Record<string, unknown>): void {
 
 export function useNotificationObserver(): void {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const handlerSet = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    if (!handlerSet.current) {
+      handlerSet.current = true;
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    }
 
     const response = Notifications.getLastNotificationResponse();
     if (response?.notification) {
