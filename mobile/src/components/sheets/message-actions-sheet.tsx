@@ -13,7 +13,7 @@ interface MessageActionsSheetProps {
     deleted: boolean;
   } | null;
   isOwn: boolean;
-  onReply: (messageId: string, content: string, senderName: string) => void;
+  onReply: (messageId: string, content: string, senderName: string, type?: string) => void;
   onEdit: (messageId: string, content: string) => void;
   onDelete: (messageId: string) => void;
   senderName: string;
@@ -43,7 +43,7 @@ export const MessageActionsSheet = forwardRef<MessageActionsSheetRef, MessageAct
 
     const handleReply = useCallback(() => {
       if (!message) return;
-      onReply(message._id, message.content, senderName);
+      onReply(message._id, message.content, senderName, message.type);
       bottomSheetRef.current?.close();
     }, [message, onReply, senderName]);
 

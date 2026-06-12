@@ -1,8 +1,9 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Avatar } from "@/components/ui/avatar";
 import { MediaContent } from "./media-content";
-import type { Message, PopulatedUser } from "@/types";
+import type { Message, PopulatedUser, ReplyPreview } from "@/types";
 import { format } from "date-fns";
+import { getMessagePreview } from "@/utils";
 
 interface MessageBubbleProps {
   message: Message;
@@ -40,7 +41,10 @@ export function MessageBubble({ message, isOwn, onLongPress }: MessageBubbleProp
           {message.replyTo && (
             <View className="border-l-2 border-neutral-400 pl-2 mb-1">
               <Text className="text-xs text-neutral-500 dark:text-neutral-400">
-                {(message.replyTo as { content?: string })?.content || "Reply"}
+                {getMessagePreview(
+                  (message.replyTo as ReplyPreview).type,
+                  (message.replyTo as ReplyPreview).content
+                )}
               </Text>
             </View>
           )}

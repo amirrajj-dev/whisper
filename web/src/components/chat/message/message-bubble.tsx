@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { MessageContent } from "./message-content";
 import { getSenderName, getSenderId, getSenderAvatar } from "./message-utils";
+import { getMessagePreview } from "@/src/utils";
 
 interface MessageBubbleProps {
   message: Message;
@@ -139,8 +140,7 @@ export function MessageBubble({
 
   const getReplyContent = () => {
     if (!replyToData) return "";
-    const content = replyToData.content;
-    return content.length > 60 ? content.substring(0, 60) + "..." : content;
+    return getMessagePreview(replyToData.type, replyToData.content);
   };
 
   return (

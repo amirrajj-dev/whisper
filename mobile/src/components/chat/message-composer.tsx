@@ -12,6 +12,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, useAudioRecorderState } from "expo-audio";
 import { MESSAGE_MAX_LENGTH, FILE_MAX_SIZE, ACCEPTED_FILE_TYPES } from "@/constants";
 import { triggerHaptic } from "@/utils/haptics";
+import { getMessagePreview } from "@/utils";
 import { PermissionDeniedModal } from "./permission-denied-modal";
 import { AttachmentPreview } from "./attachment-preview";
 
@@ -32,7 +33,7 @@ export interface MessageComposerRef {
 interface MessageComposerProps {
   onSend: (content: string, file?: Attachment) => void;
   onTextChange?: () => void;
-  replyingTo?: { content: string; senderName: string } | null;
+  replyingTo?: { content: string; senderName: string; type?: string } | null;
   onCancelReply?: () => void;
   disabled?: boolean;
   onAttachPress?: () => void;
@@ -225,7 +226,7 @@ export const MessageComposer = React.forwardRef(
             <View className="flex-1">
               <Text className="text-xs text-blue-500 font-medium">Replying to {replyingTo.senderName}</Text>
               <Text className="text-sm text-neutral-600 dark:text-neutral-400" numberOfLines={1}>
-                {replyingTo.content}
+                {getMessagePreview(replyingTo.type || "text", replyingTo.content)}
               </Text>
             </View>
             <TouchableOpacity onPress={onCancelReply} className="ml-2">

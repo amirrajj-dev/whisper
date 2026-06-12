@@ -185,8 +185,8 @@ export default function ChatRoomScreen() {
     messageActionsRef.current?.open();
   }, []);
 
-  const handleReply = useCallback((messageId: string, content: string, senderName: string) => {
-    setReplyingTo({ messageId, content, senderName });
+  const handleReply = useCallback((messageId: string, content: string, senderName: string, type?: string) => {
+    setReplyingTo({ messageId, content, senderName, type });
   }, [setReplyingTo]);
 
   const handleEdit = useCallback((messageId: string, content: string) => {

@@ -200,6 +200,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                         messageId: m._id,
                         content: m.content,
                         senderName: getSenderName(m.senderId),
+                        type: m.type,
                       })
                     }
                     onEdit={(m) => setEditingMessage({ messageId: m._id, content: m.content })}

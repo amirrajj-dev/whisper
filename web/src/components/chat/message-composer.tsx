@@ -7,6 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import type { FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
 import { FILE_MAX_SIZE, ACCEPTED_FILE_TYPES } from '@/src/constants';
+import { getMessagePreview } from '@/src/utils';
 import {
   Send,
   Paperclip,
@@ -344,7 +345,7 @@ export function MessageComposer({ conversationId, onMessageSent }: MessageCompos
           >
             <Reply className="w-3 h-3 text-primary shrink-0" />
             <span className="text-xs text-base-content/60 truncate flex-1">
-              Replying to <span className="font-medium text-base-content/80">{replyingTo.senderName}</span>: {replyingTo.content}
+              Replying to <span className="font-medium text-base-content/80">{replyingTo.senderName}</span>: {getMessagePreview(replyingTo.type || "text", replyingTo.content)}
             </span>
             <button onClick={() => setReplyingTo(null)} className="btn btn-ghost btn-xs btn-square">
               <X className="w-3 h-3" />

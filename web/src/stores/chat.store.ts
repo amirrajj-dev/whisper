@@ -8,7 +8,7 @@ interface TypingUser {
 interface ChatState {
   activeConversationId: string | null;
   conversationsSearch: string;
-  replyingTo: { messageId: string; content: string; senderName: string } | null;
+  replyingTo: { messageId: string; content: string; senderName: string; type?: string } | null;
   editingMessage: { messageId: string; content: string } | null;
   typingUsers: Record<string, TypingUser[]>;
   isSearchActive: boolean;
@@ -18,7 +18,7 @@ interface ChatState {
   unreadCounts: Record<string, number>;
   setActiveConversation: (id: string | null) => void;
   setConversationsSearch: (query: string) => void;
-  setReplyingTo: (reply: { messageId: string; content: string; senderName: string } | null) => void;
+  setReplyingTo: (reply: { messageId: string; content: string; senderName: string; type?: string } | null) => void;
   setEditingMessage: (edit: { messageId: string; content: string } | null) => void;
   addTypingUser: (conversationId: string, user: TypingUser) => void;
   removeTypingUser: (conversationId: string, userId: string) => void;
