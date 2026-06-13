@@ -99,7 +99,7 @@
 
 ### Backend
 
-[![My Skills](https://skillicons.dev/icons?i=nestjs,nodejs,ts,mongodb,redis,express,docker&perline=20)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=nestjs,nodejs,ts,mongodb,redis,express,docker,sentry&perline=20)](https://skillicons.dev)
 
 <div>
   <code>NestJS 11</code>&nbsp;
@@ -132,7 +132,7 @@
 
 ### Mobile
 
-[![My Skills](https://skillicons.dev/icons?i=react,ts,tailwind,supabase&perline=20)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=react,ts,tailwind&perline=20)](https://skillicons.dev)
 
 <div>
   <code>Expo SDK 56</code>&nbsp;
@@ -147,7 +147,7 @@
 
 ### Infrastructure & Tooling
 
-[![My Skills](https://skillicons.dev/icons?i=docker,nginx,pnpm,githubactions,git,linux&perline=20)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=docker,nginx,pnpm,bun,githubactions,git,linux&perline=20)](https://skillicons.dev)
 
 <div>
   <code>Docker Compose</code>&nbsp;
