@@ -117,7 +117,7 @@
 
 ### Web
 
-[![My Skills](https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,sentry,vercel&perline=20)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,sentry,vercel,docker&perline=20)](https://skillicons.dev)
 
 <div>
   <code>Next.js 16 + React 19</code>&nbsp;
