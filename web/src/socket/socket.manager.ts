@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { io, Socket } from "socket.io-client";
 import type {
   ServerToClientEvents,
@@ -55,6 +56,10 @@ class SocketManager {
         }
       }
       if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        Sentry.captureException(err, {
+          tags: { type: "socket-reconnect-exhausted" },
+          extra: { attempts: this.reconnectAttempts },
+        });
         this.disconnect();
       }
     });

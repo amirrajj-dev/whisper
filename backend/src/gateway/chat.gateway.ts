@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { GatewayService } from './gateway.service';
 import { MessageDocument } from 'src/common/schemas/message.schema';
 import { UserDocument } from 'src/common/schemas/user.schema';
@@ -117,7 +118,11 @@ export class ChatGateway
 
     const conversationIds: string[] = client.data?.conversationIds ?? [];
 
-    await this.userModel.findByIdAndUpdate(userId, { lastSeen: new Date() });
+    try {
+      await this.userModel.findByIdAndUpdate(userId, { lastSeen: new Date() });
+    } catch (err) {
+      Sentry.captureException(err);
+    }
 
     if (!this.gatewayService.isUserOnline(userId)) {
       const offlinePayload = { userId, lastSeen: new Date().toISOString() };
@@ -224,20 +229,26 @@ export class ChatGateway
 
     this.readLimiter.set(userId, now);
 
-    await this.messageModel.updateMany(
-      {
-        conversationId: payload.conversationId,
-        senderId: { $ne: userId },
-        readBy: { $ne: userId },
-      },
-      { $addToSet: { readBy: userId, deliveredTo: userId } },
-    );
+    try {
+      await this.messageModel.updateMany(
+        {
+          conversationId: payload.conversationId,
+          senderId: { $ne: userId },
+          readBy: { $ne: userId },
+        },
+        { $addToSet: { readBy: userId, deliveredTo: userId } },
+      );
 
-    client.to(`conversation:${payload.conversationId}`).emit('messages:read', {
-      userId,
-      conversationId: payload.conversationId,
-      readAt: new Date().toISOString(),
-    });
+      client
+        .to(`conversation:${payload.conversationId}`)
+        .emit('messages:read', {
+          userId,
+          conversationId: payload.conversationId,
+          readAt: new Date().toISOString(),
+        });
+    } catch (err) {
+      Sentry.captureException(err);
+    }
   }
 
   private extractToken(client: Socket): string | null {

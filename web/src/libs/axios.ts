@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import * as Sentry from '@sentry/nextjs';
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -68,13 +69,21 @@ api.interceptors.response.use(
       }
     }
 
+    const statusCode = error.response?.status || 0;
     const normalizedError = {
       message:
         (error.response?.data as { message?: string })?.message ||
         error.message ||
         'Something went wrong',
-      statusCode: error.response?.status || 500,
+      statusCode,
     };
+
+    if (statusCode >= 500 || (!error.response && error.request && !axios.isCancel(error))) {
+      Sentry.captureException(normalizedError, {
+        tags: { type: statusCode >= 500 ? 'api-5xx' : 'network-error' },
+        extra: { url: originalRequest?.url, method: originalRequest?.method },
+      });
+    }
 
     return Promise.reject(normalizedError);
   },
