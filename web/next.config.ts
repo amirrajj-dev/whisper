@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -20,4 +21,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "amirrajj-dev",
+  project: "whisper-web",
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+});

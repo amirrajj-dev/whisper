@@ -24,6 +24,7 @@ import { HealthModule } from './health/health.module';
 import { HealthService } from './health/health.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis, { Keyv } from '@keyv/redis';
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
         LOG_LEVEL: Joi.string()
           .valid('error', 'warn', 'info', 'debug')
           .default('info'),
+        SENTRY_DSN: Joi.string().optional(),
         CORS_ORIGIN: Joi.string().default('*'),
         THROTTLE_TTL: Joi.number().required().default(60000),
         THROTTLE_LIMIT: Joi.number().required().default(10),
@@ -125,6 +127,7 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
         ),
       }),
     }),
+    SentryModule.forRoot(),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
