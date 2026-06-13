@@ -108,7 +108,11 @@ export function ConversationItem({
         <div className="flex items-center gap-2 mt-0.5">
           {isTyping ? (
             <span className="text-xs text-primary font-medium flex items-center gap-1">
-              typing
+              {isGroup && typingUsers.length === 1
+                ? `${typingUsers[0].username} is typing...`
+                : isGroup
+                  ? `${typingUsers.length} people are typing...`
+                  : 'typing'}
               <span className="flex gap-0.5">
                 <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />

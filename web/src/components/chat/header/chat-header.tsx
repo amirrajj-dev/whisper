@@ -73,10 +73,9 @@ export function ChatHeader({ conversation, onBack }: ChatHeaderProps) {
   const isBlocked =
     blockedOverride !== null ? blockedOverride : blockedFromUser;
 
-  const typingUsersList =
-    !isGroup && conversation?._id
-      ? typingUsers[conversation._id]
-      : undefined;
+  const typingUsersList = conversation?._id
+    ? typingUsers[conversation._id]
+    : undefined;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
