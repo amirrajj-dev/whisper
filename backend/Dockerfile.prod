@@ -12,9 +12,24 @@ COPY . .
 
 RUN pnpm run build
 
+ARG SENTRY_AUTH_TOKEN
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+ARG SENTRY_RELEASE
+
+RUN if [ -n "$SENTRY_AUTH_TOKEN" ]; then \
+      npm install -g @sentry/cli && \
+      sentry-cli releases new "$SENTRY_RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" && \
+      sentry-cli releases files "$SENTRY_RELEASE" upload-source-maps dist/ --url-prefix "~/" --validate && \
+      sentry-cli releases finalize "$SENTRY_RELEASE"; \
+    fi
+
 FROM node:24-alpine AS production
 
 WORKDIR /usr/src/app
+
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
